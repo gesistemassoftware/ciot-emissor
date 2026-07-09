@@ -20,7 +20,12 @@ let clientPromise: Promise<QueryClient> | null = null;
 
 async function criarClient(): Promise<QueryClient> {
   if (process.env.DATABASE_URL) {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      // Bancos gerenciados (Render, Heroku etc.) usam certificado autoassinado;
+      // sem isso o driver rejeita a conexão TLS em produção.
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+    });
     return pool;
   }
 
