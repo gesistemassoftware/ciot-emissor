@@ -311,6 +311,54 @@ export default function Home() {
           </Campo>
         </div>
 
+        <Secao titulo="Indicadores operacionais (obrigatórios para Carga Lotação)">
+          <Checkbox
+            label="Alto desempenho"
+            checked={form.operacao.indAltoDesempenho}
+            onChange={(v) =>
+              setForm((f) => ({ ...f, operacao: { ...f.operacao, indAltoDesempenho: v } }))
+            }
+          />
+          <Checkbox
+            label="Retorno vazio"
+            checked={form.operacao.indRetornoVazio}
+            onChange={(v) =>
+              setForm((f) => ({ ...f, operacao: { ...f.operacao, indRetornoVazio: v } }))
+            }
+          />
+          <Checkbox
+            label="Composição veicular"
+            checked={form.operacao.composicaoVeicular}
+            onChange={(v) =>
+              setForm((f) => ({ ...f, operacao: { ...f.operacao, composicaoVeicular: v } }))
+            }
+          />
+        </Secao>
+
+        <Secao titulo="Contingência">
+          <Checkbox
+            label="Emitir em contingência"
+            checked={form.operacao.indContingencia}
+            onChange={(v) =>
+              setForm((f) => ({ ...f, operacao: { ...f.operacao, indContingencia: v } }))
+            }
+          />
+          {form.operacao.indContingencia && (
+            <Campo label="Justificativa da contingência" required>
+              <input
+                className="input"
+                value={form.operacao.justificativaContingencia}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    operacao: { ...f.operacao, justificativaContingencia: e.target.value },
+                  }))
+                }
+              />
+            </Campo>
+          )}
+        </Secao>
+
         <Secao titulo="Contratante">
           <Campo label="CNPJ/CPF do contratante" required>
             <input
@@ -640,54 +688,6 @@ export default function Home() {
             </div>
           )}
         </fieldset>
-
-        <Secao titulo="Indicadores operacionais (obrigatórios para Carga Lotação)">
-          <Checkbox
-            label="Alto desempenho"
-            checked={form.operacao.indAltoDesempenho}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, indAltoDesempenho: v } }))
-            }
-          />
-          <Checkbox
-            label="Retorno vazio"
-            checked={form.operacao.indRetornoVazio}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, indRetornoVazio: v } }))
-            }
-          />
-          <Checkbox
-            label="Composição veicular"
-            checked={form.operacao.composicaoVeicular}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, composicaoVeicular: v } }))
-            }
-          />
-        </Secao>
-
-        <Secao titulo="Contingência">
-          <Checkbox
-            label="Emitir em contingência"
-            checked={form.operacao.indContingencia}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, indContingencia: v } }))
-            }
-          />
-          {form.operacao.indContingencia && (
-            <Campo label="Justificativa da contingência" required>
-              <input
-                className="input"
-                value={form.operacao.justificativaContingencia}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    operacao: { ...f.operacao, justificativaContingencia: e.target.value },
-                  }))
-                }
-              />
-            </Campo>
-          )}
-        </Secao>
 
         <Secao titulo="Pagamento">
           <Campo label="Tipo de pagamento">
