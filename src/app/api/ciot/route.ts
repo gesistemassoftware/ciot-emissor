@@ -1,15 +1,11 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { buscarConta, obterCertificado } from "@/lib/auth/contas";
 import { obterContaIdDaSessao } from "@/lib/auth/session";
+import { obterCredenciaisAntt } from "@/lib/ciot/credenciais";
 import { emitirCiot } from "@/lib/ciot/provider";
 import { listarCiots, salvarCiot } from "@/lib/ciot/store";
 import { salvarTerceiro } from "@/lib/ciot/terceiros";
-import type { AnttCredenciais } from "@/lib/ciot/anttClient";
 import type { CiotEmissaoInput, Terceiro } from "@/lib/ciot/types";
-
-const ANTT_BASE_URL_HML = "https://appservices-hml.antt.gov.br/pefServices";
-const ANTT_BASE_URL_PROD = "https://appservices.antt.gov.br/pefServices";
 
 function validarTerceiro(t: Partial<Terceiro> | undefined, label: string): string | null {
   if (!t?.cpfCnpj) return `CPF/CNPJ do ${label} é obrigatório.`;
@@ -34,6 +30,11 @@ function validar(input: Partial<CiotEmissaoInput>): string | null {
 
   if (!input.veiculo?.placa) return "Placa do veículo é obrigatória.";
   if (!input.veiculo?.numeroEixos) return "Número de eixos do veículo é obrigatório.";
+  if (input.operacao?.composicaoVeicular) {
+    if (!input.implemento?.placa) return "Placa do implemento é obrigatória quando há composição veicular.";
+    if (!input.implemento?.numeroEixos)
+      return "Número de eixos do implemento é obrigatório quando há composição veicular.";
+  }
   if (!input.operacao?.tipoOperacao) return "Tipo de operação é obrigatório.";
   if (!input.operacao?.codigoMunicipioOrigem || !input.operacao?.codigoMunicipioDestino)
     return "Código IBGE do município de origem e de destino são obrigatórios.";
@@ -65,11 +66,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ mensagem: "Não autenticado." }, { status: 401 });
   }
 
-  const conta = await buscarConta(contaId);
-  if (!conta) {
-    return NextResponse.json({ mensagem: "Conta não encontrada." }, { status: 404 });
-  }
-
   const body = (await request.json()) as CiotEmissaoInput;
 
   const erro = validar(body);
@@ -85,18 +81,7 @@ export async function POST(request: NextRequest) {
     salvarTerceiro(contaId, "tomador", body.tomador),
   ]);
 
-  let credenciais: AnttCredenciais | null = null;
-  if (conta.certificadoConfigurado) {
-    const certificado = await obterCertificado(contaId);
-    if (certificado) {
-      credenciais = {
-        baseUrl: conta.anttAmbiente === "producao" ? ANTT_BASE_URL_PROD : ANTT_BASE_URL_HML,
-        pfx: certificado.pfx,
-        passphrase: certificado.passphrase,
-      };
-    }
-  }
-
+  const credenciais = await obterCredenciaisAntt(contaId);
   const resultado = await emitirCiot(body, credenciais);
 
   const registro = await salvarCiot(contaId, {

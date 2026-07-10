@@ -115,11 +115,13 @@ export interface CiotEmissaoInput {
   destinatario: Terceiro;
   tomador: Terceiro;
   veiculo: Veiculo;
+  /** Segunda unidade (reboque/semirreboque), quando operacao.composicaoVeicular = true */
+  implemento?: Veiculo;
   operacao: Operacao;
   pagamento: Pagamento;
 }
 
-export type CiotStatus = "EMITIDO" | "ERRO" | "PENDENTE";
+export type CiotStatus = "EMITIDO" | "ERRO" | "PENDENTE" | "CANCELADO" | "ENCERRADO";
 
 export interface CiotEmissaoResult {
   id: string;
@@ -131,5 +133,8 @@ export interface CiotEmissaoResult {
   avisoTransportador?: string;
   mensagemErro?: string;
   dataEmissao: string;
+  dataCancelamento?: string;
+  motivoCancelamento?: string;
+  dataEncerramento?: string;
   input: CiotEmissaoInput;
 }

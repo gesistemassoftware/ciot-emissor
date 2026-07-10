@@ -4,6 +4,7 @@ import type { CiotEmissaoInput, CiotEmissaoResult, CiotStatus } from "./types";
 
 interface EmissaoRow {
   id: string;
+  conta_id: string;
   status: CiotStatus;
   numero_ciot: string | null;
   codigo_verificador: string | null;
@@ -11,6 +12,9 @@ interface EmissaoRow {
   aviso_transportador: string | null;
   mensagem_erro: string | null;
   data_emissao: string;
+  data_cancelamento: string | null;
+  motivo_cancelamento: string | null;
+  data_encerramento: string | null;
   input: CiotEmissaoInput;
 }
 
@@ -24,6 +28,9 @@ function paraResultado(row: EmissaoRow): CiotEmissaoResult {
     avisoTransportador: row.aviso_transportador ?? undefined,
     mensagemErro: row.mensagem_erro ?? undefined,
     dataEmissao: row.data_emissao,
+    dataCancelamento: row.data_cancelamento ?? undefined,
+    motivoCancelamento: row.motivo_cancelamento ?? undefined,
+    dataEncerramento: row.data_encerramento ?? undefined,
     input: row.input,
   };
 }
@@ -35,6 +42,18 @@ export async function listarCiots(contaId: string): Promise<CiotEmissaoResult[]>
     [contaId]
   );
   return linhas.map(paraResultado);
+}
+
+export async function buscarCiot(
+  contaId: string,
+  emissaoId: string
+): Promise<CiotEmissaoResult | null> {
+  await migrar();
+  const linhas = await query<EmissaoRow>(
+    "SELECT * FROM emissoes WHERE conta_id = $1 AND id = $2",
+    [contaId, emissaoId]
+  );
+  return linhas[0] ? paraResultado(linhas[0]) : null;
 }
 
 export async function salvarCiot(
@@ -64,4 +83,29 @@ export async function salvarCiot(
   );
 
   return { ...resultado, id };
+}
+
+export async function cancelarCiotNoBanco(
+  contaId: string,
+  emissaoId: string,
+  dataCancelamento: string,
+  motivoCancelamento: string
+): Promise<void> {
+  await query(
+    `UPDATE emissoes SET status = 'CANCELADO', data_cancelamento = $1, motivo_cancelamento = $2
+     WHERE conta_id = $3 AND id = $4`,
+    [dataCancelamento, motivoCancelamento, contaId, emissaoId]
+  );
+}
+
+export async function encerrarCiotNoBanco(
+  contaId: string,
+  emissaoId: string,
+  dataEncerramento: string
+): Promise<void> {
+  await query(
+    `UPDATE emissoes SET status = 'ENCERRADO', data_encerramento = $1
+     WHERE conta_id = $2 AND id = $3`,
+    [dataEncerramento, contaId, emissaoId]
+  );
 }

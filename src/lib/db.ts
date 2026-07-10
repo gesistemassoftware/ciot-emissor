@@ -88,6 +88,10 @@ CREATE TABLE IF NOT EXISTS emissoes (
 
 CREATE INDEX IF NOT EXISTS emissoes_conta_id_idx ON emissoes (conta_id);
 
+ALTER TABLE emissoes ADD COLUMN IF NOT EXISTS data_cancelamento TIMESTAMPTZ;
+ALTER TABLE emissoes ADD COLUMN IF NOT EXISTS motivo_cancelamento TEXT;
+ALTER TABLE emissoes ADD COLUMN IF NOT EXISTS data_encerramento TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS terceiros (
   id UUID PRIMARY KEY,
   conta_id UUID NOT NULL REFERENCES contas(id),

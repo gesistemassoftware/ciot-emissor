@@ -43,6 +43,34 @@ Sem `DATABASE_URL` configurado, os dados ficam num banco Postgres embarcado
    no caso do contratado) é enviado à ANTT — o resto (endereço, contato) fica
    guardado na plataforma só para reaproveitamento, no mesmo padrão usado por
    sistemas de operadoras de CIOT.
+6. Quando **Composição veicular = sim**, aparece a seção **Implemento**
+   (reboque/semirreboque) — vira uma segunda entrada no array `Veiculos` da
+   declaração.
+7. Depois de emitido (status EMITIDO, fora do modo simulado), cada linha do
+   histórico ganha ações **Cancelar**, **Encerrar** e **Consultar status**,
+   que chamam `CancelamentoOperacaoTransporte`, `EncerramentoOperacaoTransporte`
+   e `ConsultarCIOTGerado` na ANTT.
+
+## Integrações auxiliares
+
+- **Busca de CNPJ (ReceitaWS)** e **CEP (ViaCEP)**: preenchem automaticamente
+  razão social/endereço nos cadastros de contratado/destinatário/tomador.
+  APIs públicas gratuitas, sem chave — a ReceitaWS tem limite de ~3
+  requisições/minuto no plano gratuito.
+- **Roteirizador (distância entre municípios)**: código IBGE → nome do
+  município (API do IBGE) → coordenadas (Nominatim/OpenStreetMap) → distância
+  rodoviária (OSRM, servidor de demonstração público). Estimativa útil para
+  preencher rápido, mas os servidores públicos do Nominatim/OSRM têm limite de
+  uso e não são garantidos para produção em volume — para escala, troque por
+  um provedor pago (Google, HERE, Mapbox) ou OSRM auto-hospedado. Ver
+  `src/lib/distancia.ts`.
+- **Piso Mínimo de Frete (ANTT)**: a
+  [calculadora oficial](https://calculadorafrete.antt.gov.br) não expõe API
+  JSON — é um formulário ASP.NET clássico. `src/lib/pisoMinimo.ts` automatiza
+  o mesmo fluxo que um navegador faria (captura token anti-forgery + cookie,
+  envia o formulário, lê o HTML de resposta). Funciona hoje, mas **depende da
+  estrutura HTML do site da ANTT** — se eles reformularem o site, essa
+  integração quebra e precisa ser ajustada.
 
 ## Pré-requisitos reais (fora do código) — por cliente
 
@@ -94,11 +122,14 @@ precisariam reenviar o arquivo.
 - `src/lib/crypto.ts` — criptografia AES-256-GCM do certificado/senha em repouso
 - `src/lib/auth/` — sessão (JWT em cookie httpOnly) e repositório de contas
 - `src/lib/ciot/types.ts` — tipos do domínio, alinhados ao schema `DeclaracaoOperacaoTransporte` da ANTT
-- `src/lib/ciot/anttClient.ts` — integração real com a ANTT (TLS mútuo com certificado do cliente)
+- `src/lib/ciot/anttClient.ts` — integração real com a ANTT (TLS mútuo com certificado do cliente); inclui declaração, cancelamento, encerramento e consulta
+- `src/lib/ciot/credenciais.ts` — monta as credenciais ANTT (baseUrl + certificado) de uma conta
 - `src/lib/ciot/provider.ts` — escolhe entre chamada real e modo simulado
 - `src/lib/ciot/store.ts` — emissões persistidas no banco, escopadas por conta
 - `src/lib/ciot/terceiros.ts` — cadastro reutilizável de contratado/destinatário/tomador por CPF/CNPJ
-- `src/middleware.ts` — protege as rotas, redireciona para `/login` sem sessão
+- `src/lib/distancia.ts` — roteirizador (distância entre municípios via IBGE + Nominatim + OSRM)
+- `src/lib/pisoMinimo.ts` — integração com a calculadora de Piso Mínimo de Frete da ANTT
+- `src/proxy.ts` — protege as rotas, redireciona para `/login` sem sessão (convenção "Proxy" do Next.js 16, antigo `middleware.ts`)
 - `src/app/cadastro`, `src/app/login` — telas de conta
 - `src/app/configuracoes` — perfil da transportadora + upload de certificado
 - `src/app/page.tsx` — formulário de emissão + histórico (escopado à conta logada)

@@ -12,6 +12,7 @@ import type {
   TipoOperacao,
   TipoPagamento,
 } from "@/lib/ciot/types";
+import type { PisoMinimoResultado } from "@/lib/pisoMinimo";
 
 const ESTADOS = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
@@ -60,6 +61,7 @@ const FORM_INICIAL: CiotEmissaoInput = {
   destinatario: { ...TERCEIRO_VAZIO },
   tomador: { ...TERCEIRO_VAZIO },
   veiculo: { placa: "", numeroEixos: 2, rntrc: "" },
+  implemento: { placa: "", numeroEixos: 2, rntrc: "" },
   operacao: {
     tipoOperacao: 1,
     codigoMunicipioOrigem: "",
@@ -106,6 +108,11 @@ export default function Home() {
   const [ultimoResultado, setUltimoResultado] = useState<CiotEmissaoResult | null>(null);
   const [historico, setHistorico] = useState<CiotEmissaoResult[]>([]);
   const [carregandoHistorico, setCarregandoHistorico] = useState(true);
+  const [calculandoDistancia, setCalculandoDistancia] = useState(false);
+  const [erroDistancia, setErroDistancia] = useState<string | null>(null);
+  const [calculandoPiso, setCalculandoPiso] = useState(false);
+  const [pisoMinimo, setPisoMinimo] = useState<PisoMinimoResultado | null>(null);
+  const [erroPiso, setErroPiso] = useState<string | null>(null);
 
   async function carregarHistorico() {
     setCarregandoHistorico(true);
@@ -132,6 +139,64 @@ export default function Home() {
     const encontrado = await buscarTerceiro(papel, cpfCnpj);
     if (!encontrado) return;
     setForm((f) => ({ ...f, [papel]: encontrado }));
+  }
+
+  async function handleCalcularDistancia() {
+    const { codigoMunicipioOrigem, codigoMunicipioDestino } = form.operacao;
+    if (!codigoMunicipioOrigem || !codigoMunicipioDestino) {
+      setErroDistancia("Informe o código IBGE de origem e destino primeiro.");
+      return;
+    }
+    setCalculandoDistancia(true);
+    setErroDistancia(null);
+    try {
+      const res = await fetch(
+        `/api/distancia?origem=${codigoMunicipioOrigem}&destino=${codigoMunicipioDestino}`
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setErroDistancia(data.mensagem ?? "Não foi possível calcular a distância.");
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        operacao: { ...f.operacao, distanciaPercorridaKm: data.distanciaKm },
+      }));
+    } catch {
+      setErroDistancia("Falha de comunicação ao calcular distância.");
+    } finally {
+      setCalculandoDistancia(false);
+    }
+  }
+
+  async function handleCalcularPiso() {
+    setCalculandoPiso(true);
+    setErroPiso(null);
+    setPisoMinimo(null);
+    try {
+      const res = await fetch("/api/piso-minimo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codigoTipoCarga: form.operacao.codigoTipoCarga,
+          numeroEixos: form.veiculo.numeroEixos,
+          distanciaKm: form.operacao.distanciaPercorridaKm,
+          composicaoVeicular: form.operacao.composicaoVeicular,
+          altoDesempenho: form.operacao.indAltoDesempenho,
+          retornoVazio: form.operacao.indRetornoVazio,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErroPiso(data.mensagem ?? "Não foi possível calcular o piso mínimo.");
+        return;
+      }
+      setPisoMinimo(data);
+    } catch {
+      setErroPiso("Falha de comunicação ao calcular o piso mínimo.");
+    } finally {
+      setCalculandoPiso(false);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -276,6 +341,54 @@ export default function Home() {
           </Campo>
         </Secao>
 
+        {form.operacao.composicaoVeicular && (
+          <Secao titulo="Implemento (reboque/semirreboque)">
+            <Campo label="Placa" required>
+              <input
+                className="input uppercase"
+                value={form.implemento?.placa ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), placa: e.target.value },
+                  }))
+                }
+                placeholder="ABC1D23"
+              />
+            </Campo>
+            <Campo label="Número de eixos" required>
+              <input
+                type="number"
+                min={1}
+                max={9}
+                className="input"
+                value={form.implemento?.numeroEixos ?? 2}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    implemento: {
+                      ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }),
+                      numeroEixos: Number(e.target.value),
+                    },
+                  }))
+                }
+              />
+            </Campo>
+            <Campo label="RNTRC do implemento (se diferente do contratado)">
+              <input
+                className="input"
+                value={form.implemento?.rntrc ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), rntrc: e.target.value },
+                  }))
+                }
+              />
+            </Campo>
+          </Secao>
+        )}
+
         <Secao titulo="Operação de transporte">
           <Campo label="Tipo de operação">
             <select
@@ -347,18 +460,30 @@ export default function Home() {
             />
           </Campo>
           <Campo label="Distância percorrida (km)">
-            <input
-              type="number"
-              min={0}
-              className="input"
-              value={form.operacao.distanciaPercorridaKm}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, distanciaPercorridaKm: Number(e.target.value) },
-                }))
-              }
-            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={0}
+                className="input"
+                value={form.operacao.distanciaPercorridaKm}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    operacao: { ...f.operacao, distanciaPercorridaKm: Number(e.target.value) },
+                  }))
+                }
+              />
+              <button
+                type="button"
+                onClick={handleCalcularDistancia}
+                disabled={calculandoDistancia}
+                className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+                title="Calcular distância entre origem e destino (roteirizador)"
+              >
+                {calculandoDistancia ? "Calculando..." : "Calcular"}
+              </button>
+            </div>
+            {erroDistancia && <p className="text-xs text-red-600 mt-1">{erroDistancia}</p>}
           </Campo>
           <Campo label="Data início da viagem" required>
             <input
@@ -435,19 +560,55 @@ export default function Home() {
             </select>
           </Campo>
           <Campo label="Valor do frete (R$)" required>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className="input"
-              value={form.operacao.valorFrete}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, valorFrete: Number(e.target.value) },
-                }))
-              }
-            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="input"
+                value={form.operacao.valorFrete}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    operacao: { ...f.operacao, valorFrete: Number(e.target.value) },
+                  }))
+                }
+              />
+              <button
+                type="button"
+                onClick={handleCalcularPiso}
+                disabled={calculandoPiso}
+                className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+                title="Consultar piso mínimo de frete na calculadora oficial da ANTT"
+              >
+                {calculandoPiso ? "Calculando..." : "Piso mínimo ANTT"}
+              </button>
+            </div>
+            {erroPiso && <p className="text-xs text-red-600 mt-1">{erroPiso}</p>}
+            {pisoMinimo && (
+              <div className="text-xs text-neutral-600 mt-1 bg-neutral-50 border border-neutral-200 rounded-lg p-2">
+                Piso mínimo ANTT:{" "}
+                <strong>
+                  {pisoMinimo.valorPiso.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </strong>
+                {pisoMinimo.tabela && <> · {pisoMinimo.tabela}</>}
+                <button
+                  type="button"
+                  className="ml-2 text-blue-600 hover:underline cursor-pointer"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      operacao: { ...f.operacao, valorFrete: pisoMinimo.valorPiso },
+                    }))
+                  }
+                >
+                  usar este valor
+                </button>
+              </div>
+            )}
           </Campo>
         </Secao>
 
@@ -696,40 +857,12 @@ export default function Home() {
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Origem → Destino</th>
                   <th className="px-4 py-2">Frete</th>
+                  <th className="px-4 py-2">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {historico.map((item) => (
-                  <tr key={item.id} className="border-t border-neutral-200">
-                    <td className="px-4 py-2">
-                      {new Date(item.dataEmissao).toLocaleString("pt-BR")}
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">{item.numeroCiot ?? "—"}</td>
-                    <td className="px-4 py-2 font-mono text-xs">
-                      {item.codigoVerificador ?? "—"}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={
-                          item.status === "EMITIDO"
-                            ? "text-green-700"
-                            : item.status === "ERRO"
-                            ? "text-red-700"
-                            : "text-amber-700"
-                        }
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">
-                      {item.input.operacao.nomeMunicipioOrigem ||
-                        item.input.operacao.codigoMunicipioOrigem}{" "}
-                      →{" "}
-                      {item.input.operacao.nomeMunicipioDestino ||
-                        item.input.operacao.codigoMunicipioDestino}
-                    </td>
-                    <td className="px-4 py-2">{formatarMoeda(item.input.operacao.valorFrete)}</td>
-                  </tr>
+                  <LinhaHistorico key={item.id} item={item} onAtualizado={carregarHistorico} />
                 ))}
               </tbody>
             </table>
@@ -737,6 +870,184 @@ export default function Home() {
         )}
       </section>
     </div>
+  );
+}
+
+function LinhaHistorico({
+  item,
+  onAtualizado,
+}: {
+  item: CiotEmissaoResult;
+  onAtualizado: () => void;
+}) {
+  const [mostrarCancelar, setMostrarCancelar] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [processando, setProcessando] = useState(false);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+
+  const simulado = item.protocoloOperadora?.startsWith("MOCK-") ?? false;
+  const podeGerenciar = item.status === "EMITIDO" && !!item.numeroCiot && !simulado;
+
+  async function handleCancelar() {
+    if (!motivo.trim()) {
+      setMensagem("Informe o motivo do cancelamento.");
+      return;
+    }
+    setProcessando(true);
+    setMensagem(null);
+    try {
+      const res = await fetch(`/api/ciot/${item.id}/cancelar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMensagem(data.mensagem ?? "Falha ao cancelar.");
+        return;
+      }
+      setMostrarCancelar(false);
+      onAtualizado();
+    } catch {
+      setMensagem("Falha de comunicação.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  async function handleEncerrar() {
+    setProcessando(true);
+    setMensagem(null);
+    try {
+      const res = await fetch(`/api/ciot/${item.id}/encerrar`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setMensagem(data.mensagem ?? "Falha ao encerrar.");
+        return;
+      }
+      onAtualizado();
+    } catch {
+      setMensagem("Falha de comunicação.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  async function handleConsultar() {
+    setProcessando(true);
+    setMensagem(null);
+    try {
+      const res = await fetch(`/api/ciot/${item.id}/consultar`);
+      const data = await res.json();
+      if (!res.ok) {
+        setMensagem(data.mensagem ?? "Falha ao consultar.");
+        return;
+      }
+      setMensagem(
+        data.existe ? "CIOT confirmado na ANTT." : data.mensagem ?? "CIOT não encontrado na ANTT."
+      );
+    } catch {
+      setMensagem("Falha de comunicação.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  return (
+    <tr className="border-t border-neutral-200 align-top">
+      <td className="px-4 py-2">{new Date(item.dataEmissao).toLocaleString("pt-BR")}</td>
+      <td className="px-4 py-2 font-mono text-xs">{item.numeroCiot ?? "—"}</td>
+      <td className="px-4 py-2 font-mono text-xs">{item.codigoVerificador ?? "—"}</td>
+      <td className="px-4 py-2">
+        <span
+          className={
+            item.status === "EMITIDO"
+              ? "text-green-700"
+              : item.status === "ERRO"
+              ? "text-red-700"
+              : item.status === "CANCELADO"
+              ? "text-neutral-500"
+              : "text-amber-700"
+          }
+        >
+          {item.status}
+        </span>
+      </td>
+      <td className="px-4 py-2">
+        {item.input.operacao.nomeMunicipioOrigem || item.input.operacao.codigoMunicipioOrigem}{" "}
+        → {item.input.operacao.nomeMunicipioDestino || item.input.operacao.codigoMunicipioDestino}
+      </td>
+      <td className="px-4 py-2">{formatarMoeda(item.input.operacao.valorFrete)}</td>
+      <td className="px-4 py-2">
+        {podeGerenciar ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMostrarCancelar((v) => !v)}
+                disabled={processando}
+                className="text-xs text-red-600 hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleEncerrar}
+                disabled={processando}
+                className="text-xs text-blue-600 hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Encerrar
+              </button>
+              <button
+                type="button"
+                onClick={handleConsultar}
+                disabled={processando}
+                className="text-xs text-neutral-600 hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Consultar
+              </button>
+            </div>
+            {mostrarCancelar && (
+              <div className="flex gap-1">
+                <input
+                  className="input text-xs py-1"
+                  placeholder="Motivo do cancelamento"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={handleCancelar}
+                  disabled={processando}
+                  className="shrink-0 rounded-lg border border-red-300 px-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 cursor-pointer"
+                >
+                  Confirmar
+                </button>
+              </div>
+            )}
+            {mensagem && <p className="text-xs text-neutral-500">{mensagem}</p>}
+          </div>
+        ) : (
+          <div>
+            {simulado ? (
+              <span className="text-xs text-neutral-400">simulado</span>
+            ) : (
+              item.status !== "EMITIDO" && (
+                <button
+                  type="button"
+                  onClick={handleConsultar}
+                  disabled={processando}
+                  className="text-xs text-neutral-600 hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  Consultar
+                </button>
+              )
+            )}
+            {mensagem && <p className="text-xs text-neutral-500">{mensagem}</p>}
+          </div>
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -766,19 +1077,102 @@ function TerceiroSecao({
   onBuscar: (cpfCnpj: string) => void;
   mostrarRntrc?: boolean;
 }) {
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [erroBusca, setErroBusca] = useState<string | null>(null);
+
+  async function handleBuscarCnpj() {
+    const digitos = valor.cpfCnpj.replace(/\D/g, "");
+    if (digitos.length !== 14) {
+      setErroBusca("Busca automática só funciona para CNPJ (14 dígitos).");
+      return;
+    }
+    setBuscandoCnpj(true);
+    setErroBusca(null);
+    try {
+      const res = await fetch(`/api/lookup/cnpj?cnpj=${digitos}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setErroBusca(data.mensagem ?? "CNPJ não encontrado.");
+        return;
+      }
+      onChange({
+        ...valor,
+        nomeRazaoSocial: data.razaoSocial || valor.nomeRazaoSocial,
+        endereco: {
+          ...valor.endereco,
+          rua: data.rua || valor.endereco.rua,
+          numero: data.numero || valor.endereco.numero,
+          bairro: data.bairro || valor.endereco.bairro,
+          municipio: data.municipio || valor.endereco.municipio,
+          uf: data.uf || valor.endereco.uf,
+          cep: data.cep || valor.endereco.cep,
+        },
+      });
+    } catch {
+      setErroBusca("Falha ao consultar CNPJ.");
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  }
+
+  async function handleBuscarCep() {
+    const digitos = valor.endereco.cep.replace(/\D/g, "");
+    if (digitos.length !== 8) {
+      setErroBusca("CEP deve ter 8 dígitos.");
+      return;
+    }
+    setBuscandoCep(true);
+    setErroBusca(null);
+    try {
+      const res = await fetch(`/api/lookup/cep?cep=${digitos}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setErroBusca(data.mensagem ?? "CEP não encontrado.");
+        return;
+      }
+      onChange({
+        ...valor,
+        endereco: {
+          ...valor.endereco,
+          rua: data.rua || valor.endereco.rua,
+          bairro: data.bairro || valor.endereco.bairro,
+          municipio: data.municipio || valor.endereco.municipio,
+          uf: data.uf || valor.endereco.uf,
+        },
+      });
+    } catch {
+      setErroBusca("Falha ao consultar CEP.");
+    } finally {
+      setBuscandoCep(false);
+    }
+  }
+
   return (
     <fieldset className="border border-neutral-200 rounded-xl p-5">
       <legend className="px-2 text-sm font-semibold text-neutral-700">{titulo}</legend>
       {descricao && <p className="text-xs text-neutral-500 mb-3">{descricao}</p>}
+      {erroBusca && <p className="text-xs text-red-600 mb-3">{erroBusca}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Campo label="CPF/CNPJ" required>
-          <input
-            className="input"
-            value={valor.cpfCnpj}
-            onChange={(e) => onChange({ ...valor, cpfCnpj: e.target.value })}
-            onBlur={(e) => onBuscar(e.target.value)}
-            placeholder={`Digite e saia do campo para buscar cadastro de ${papel}`}
-          />
+          <div className="flex gap-2">
+            <input
+              className="input"
+              value={valor.cpfCnpj}
+              onChange={(e) => onChange({ ...valor, cpfCnpj: e.target.value })}
+              onBlur={(e) => onBuscar(e.target.value)}
+              placeholder={`Digite e saia do campo para buscar cadastro de ${papel}`}
+            />
+            <button
+              type="button"
+              onClick={handleBuscarCnpj}
+              disabled={buscandoCnpj}
+              className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+              title="Buscar dados do CNPJ na Receita Federal"
+            >
+              {buscandoCnpj ? "..." : "Buscar CNPJ"}
+            </button>
+          </div>
         </Campo>
         <Campo label="Nome / Razão social" required>
           <input
@@ -844,13 +1238,24 @@ function TerceiroSecao({
           />
         </Campo>
         <Campo label="CEP" required>
-          <input
-            className="input"
-            value={valor.endereco.cep}
-            onChange={(e) =>
-              onChange({ ...valor, endereco: { ...valor.endereco, cep: e.target.value } })
-            }
-          />
+          <div className="flex gap-2">
+            <input
+              className="input"
+              value={valor.endereco.cep}
+              onChange={(e) =>
+                onChange({ ...valor, endereco: { ...valor.endereco, cep: e.target.value } })
+              }
+            />
+            <button
+              type="button"
+              onClick={handleBuscarCep}
+              disabled={buscandoCep}
+              className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+              title="Buscar endereço pelo CEP"
+            >
+              {buscandoCep ? "..." : "Buscar CEP"}
+            </button>
+          </div>
         </Campo>
         <Campo label="Município" required>
           <input

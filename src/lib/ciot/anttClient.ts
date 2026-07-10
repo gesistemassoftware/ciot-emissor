@@ -100,6 +100,15 @@ function montarPayloadDeclaracao(input: CiotEmissaoInput) {
         RNTRC: input.veiculo.rntrc,
         NumeroEixos: input.veiculo.numeroEixos,
       },
+      ...(input.operacao.composicaoVeicular && input.implemento
+        ? [
+            {
+              Placa: input.implemento.placa.toUpperCase(),
+              RNTRC: input.implemento.rntrc,
+              NumeroEixos: input.implemento.numeroEixos,
+            },
+          ]
+        : []),
     ],
     OrigemDestino: [
       {
@@ -132,6 +141,104 @@ function montarPayloadDeclaracao(input: CiotEmissaoInput) {
       IndRetornoVazio: input.operacao.indRetornoVazio,
       ComposicaoVeicular: input.operacao.composicaoVeicular,
     },
+  };
+}
+
+interface CancelamentoResponse {
+  CodigoIdentificacaoOperacao?: string;
+  DataCancelamento?: string;
+  Protocolo?: string;
+  Codigo?: string;
+  Mensagem?: string;
+}
+
+interface EncerramentoResponse {
+  CodigoIdentificacaoOperacao?: string;
+  DataEncerramento?: string;
+  Protocolo?: string;
+  Codigo?: string;
+  Mensagem?: string;
+}
+
+interface ConsultaCiotResponse {
+  CodigoIdentificacaoOperacao?: string;
+  Codigo?: string;
+  Mensagem?: string;
+}
+
+/**
+ * Cancelamento e Encerramento usam o CIOT concatenado com o Código
+ * Verificador (16 caracteres = 12 do CIOT + 4 do verificador) — diferente da
+ * Declaração, que retorna os dois campos separados (DCS PEF v1.1).
+ */
+function codigoComVerificador(numeroCiot: string, codigoVerificador: string): string {
+  return `${numeroCiot}${codigoVerificador}`;
+}
+
+export async function cancelarCiotAntt(
+  numeroCiot: string,
+  codigoVerificador: string,
+  motivoCancelamento: string,
+  credenciais: AnttCredenciais
+): Promise<{
+  ok: boolean;
+  dataCancelamento?: string;
+  protocolo?: string;
+  mensagemErro?: string;
+}> {
+  const { status, body } = await postJson<CancelamentoResponse>(
+    credenciais,
+    "CancelamentoOperacaoTransporte",
+    {
+      CodigoIdentificacaoOperacao: codigoComVerificador(numeroCiot, codigoVerificador),
+      MotivoCancelamento: motivoCancelamento,
+    }
+  );
+
+  if (status < 200 || status >= 300 || !body.DataCancelamento) {
+    return { ok: false, mensagemErro: body.Mensagem ?? `Erro HTTP ${status} na ANTT.` };
+  }
+
+  return { ok: true, dataCancelamento: body.DataCancelamento, protocolo: body.Protocolo };
+}
+
+export async function encerrarCiotAntt(
+  numeroCiot: string,
+  codigoVerificador: string,
+  credenciais: AnttCredenciais
+): Promise<{
+  ok: boolean;
+  dataEncerramento?: string;
+  protocolo?: string;
+  mensagemErro?: string;
+}> {
+  const { status, body } = await postJson<EncerramentoResponse>(
+    credenciais,
+    "EncerramentoOperacaoTransporte",
+    { CodigoIdentificacaoOperacao: codigoComVerificador(numeroCiot, codigoVerificador) }
+  );
+
+  if (status < 200 || status >= 300 || !body.DataEncerramento) {
+    return { ok: false, mensagemErro: body.Mensagem ?? `Erro HTTP ${status} na ANTT.` };
+  }
+
+  return { ok: true, dataEncerramento: body.DataEncerramento, protocolo: body.Protocolo };
+}
+
+export async function consultarCiotGeradoAntt(
+  numeroCiot: string,
+  anoDeclaracao: number,
+  credenciais: AnttCredenciais
+): Promise<{ existe: boolean; mensagem?: string }> {
+  const { status, body } = await postJson<ConsultaCiotResponse>(
+    credenciais,
+    "ConsultarCIOTGerado",
+    { CodigoIdentificacaoOperacao: numeroCiot, AnoDeclaracao: anoDeclaracao }
+  );
+
+  return {
+    existe: status >= 200 && status < 300 && !!body.CodigoIdentificacaoOperacao,
+    mensagem: body.Mensagem,
   };
 }
 
