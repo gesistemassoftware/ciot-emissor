@@ -87,6 +87,31 @@ CREATE TABLE IF NOT EXISTS emissoes (
 );
 
 CREATE INDEX IF NOT EXISTS emissoes_conta_id_idx ON emissoes (conta_id);
+
+CREATE TABLE IF NOT EXISTS terceiros (
+  id UUID PRIMARY KEY,
+  conta_id UUID NOT NULL REFERENCES contas(id),
+  papel TEXT NOT NULL,
+  cpf_cnpj TEXT NOT NULL,
+  nome_razao_social TEXT NOT NULL,
+  email TEXT,
+  rntrc TEXT,
+  qtd_dependentes INT,
+  rua TEXT NOT NULL,
+  numero TEXT NOT NULL,
+  bairro TEXT NOT NULL,
+  cep TEXT NOT NULL,
+  municipio TEXT NOT NULL,
+  uf TEXT NOT NULL,
+  celular_ddd TEXT,
+  celular_numero TEXT,
+  comercial_ddd TEXT,
+  comercial_numero TEXT,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (conta_id, papel, cpf_cnpj)
+);
+
+CREATE INDEX IF NOT EXISTS terceiros_conta_papel_idx ON terceiros (conta_id, papel);
 `;
 
 let migrado: Promise<void> | null = null;

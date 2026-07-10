@@ -7,9 +7,17 @@ import type {
   CiotEmissaoInput,
   CiotEmissaoResult,
   CodigoTipoCarga,
+  PapelTerceiro,
+  Terceiro,
   TipoOperacao,
   TipoPagamento,
 } from "@/lib/ciot/types";
+
+const ESTADOS = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+  "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+  "SP", "SE", "TO",
+];
 
 const TIPOS_CARGA: { value: CodigoTipoCarga; label: string }[] = [
   { value: "1", label: "1 - Granel sólido" },
@@ -35,8 +43,22 @@ const TIPOS_PAGAMENTO: { value: TipoPagamento; label: string }[] = [
   { value: 6, label: "6 - Pix" },
 ];
 
+const TERCEIRO_VAZIO: Terceiro = {
+  cpfCnpj: "",
+  nomeRazaoSocial: "",
+  email: "",
+  rntrc: "",
+  qtdDependentes: undefined,
+  endereco: { rua: "", numero: "", bairro: "", cep: "", municipio: "", uf: "SP" },
+  celular: { ddd: "", numero: "" },
+  comercial: { ddd: "", numero: "" },
+};
+
 const FORM_INICIAL: CiotEmissaoInput = {
   contratante: { cnpj: "", razaoSocial: "" },
+  contratado: { ...TERCEIRO_VAZIO },
+  destinatario: { ...TERCEIRO_VAZIO },
+  tomador: { ...TERCEIRO_VAZIO },
   veiculo: { placa: "", numeroEixos: 2, rntrc: "" },
   operacao: {
     tipoOperacao: 1,
@@ -51,7 +73,6 @@ const FORM_INICIAL: CiotEmissaoInput = {
     pesoCargaKg: 0,
     codigoTipoCarga: "5",
     valorFrete: 0,
-    cpfCnpjDestinatario: "",
     indAltoDesempenho: false,
     indRetornoVazio: false,
     composicaoVeicular: false,
@@ -68,6 +89,13 @@ const FORM_INICIAL: CiotEmissaoInput = {
 
 function formatarMoeda(valor: number) {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+async function buscarTerceiro(papel: PapelTerceiro, cpfCnpj: string): Promise<Terceiro | null> {
+  if (!cpfCnpj) return null;
+  const res = await fetch(`/api/terceiros?papel=${papel}&cpfCnpj=${encodeURIComponent(cpfCnpj)}`);
+  if (!res.ok) return null;
+  return res.json();
 }
 
 export default function Home() {
@@ -98,6 +126,12 @@ export default function Home() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
+  }
+
+  async function handleBuscarTerceiro(papel: PapelTerceiro, cpfCnpj: string) {
+    const encontrado = await buscarTerceiro(papel, cpfCnpj);
+    if (!encontrado) return;
+    setForm((f) => ({ ...f, [papel]: encontrado }));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -177,6 +211,34 @@ export default function Home() {
           </Campo>
         </Secao>
 
+        <TerceiroSecao
+          titulo="Contratado / Proprietário do Veículo"
+          descricao="Motorista ou dono do veículo que vai efetivamente rodar esta operação — pode variar a cada emissão (ex: TAC subcontratado)."
+          papel="contratado"
+          valor={form.contratado}
+          onChange={(v) => setForm((f) => ({ ...f, contratado: v }))}
+          onBuscar={(cpfCnpj) => handleBuscarTerceiro("contratado", cpfCnpj)}
+          mostrarRntrc
+        />
+
+        <TerceiroSecao
+          titulo="Destinatário"
+          descricao="Quem recebe a carga."
+          papel="destinatario"
+          valor={form.destinatario}
+          onChange={(v) => setForm((f) => ({ ...f, destinatario: v }))}
+          onBuscar={(cpfCnpj) => handleBuscarTerceiro("destinatario", cpfCnpj)}
+        />
+
+        <TerceiroSecao
+          titulo="Tomador do Serviço"
+          descricao="Quem solicitou/paga pelo serviço de transporte (pode ser o próprio contratante)."
+          papel="tomador"
+          valor={form.tomador}
+          onChange={(v) => setForm((f) => ({ ...f, tomador: v }))}
+          onBuscar={(cpfCnpj) => handleBuscarTerceiro("tomador", cpfCnpj)}
+        />
+
         <Secao titulo="Veículo">
           <Campo label="Placa" required>
             <input
@@ -203,7 +265,7 @@ export default function Home() {
               }
             />
           </Campo>
-          <Campo label="RNTRC do veículo (se diferente do transportador)">
+          <Campo label="RNTRC do veículo (se diferente do contratado)">
             <input
               className="input"
               value={form.veiculo.rntrc}
@@ -383,18 +445,6 @@ export default function Home() {
                 setForm((f) => ({
                   ...f,
                   operacao: { ...f.operacao, valorFrete: Number(e.target.value) },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="CPF/CNPJ do destinatário (opcional)">
-            <input
-              className="input"
-              value={form.operacao.cpfCnpjDestinatario}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, cpfCnpjDestinatario: e.target.value },
                 }))
               }
             />
@@ -695,6 +745,177 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
     <fieldset className="border border-neutral-200 rounded-xl p-5">
       <legend className="px-2 text-sm font-semibold text-neutral-700">{titulo}</legend>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">{children}</div>
+    </fieldset>
+  );
+}
+
+function TerceiroSecao({
+  titulo,
+  descricao,
+  papel,
+  valor,
+  onChange,
+  onBuscar,
+  mostrarRntrc,
+}: {
+  titulo: string;
+  descricao?: string;
+  papel: PapelTerceiro;
+  valor: Terceiro;
+  onChange: (v: Terceiro) => void;
+  onBuscar: (cpfCnpj: string) => void;
+  mostrarRntrc?: boolean;
+}) {
+  return (
+    <fieldset className="border border-neutral-200 rounded-xl p-5">
+      <legend className="px-2 text-sm font-semibold text-neutral-700">{titulo}</legend>
+      {descricao && <p className="text-xs text-neutral-500 mb-3">{descricao}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Campo label="CPF/CNPJ" required>
+          <input
+            className="input"
+            value={valor.cpfCnpj}
+            onChange={(e) => onChange({ ...valor, cpfCnpj: e.target.value })}
+            onBlur={(e) => onBuscar(e.target.value)}
+            placeholder={`Digite e saia do campo para buscar cadastro de ${papel}`}
+          />
+        </Campo>
+        <Campo label="Nome / Razão social" required>
+          <input
+            className="input"
+            value={valor.nomeRazaoSocial}
+            onChange={(e) => onChange({ ...valor, nomeRazaoSocial: e.target.value })}
+          />
+        </Campo>
+        <Campo label="E-mail">
+          <input
+            type="email"
+            className="input"
+            value={valor.email ?? ""}
+            onChange={(e) => onChange({ ...valor, email: e.target.value })}
+          />
+        </Campo>
+        {mostrarRntrc && (
+          <>
+            <Campo label="RNTRC" required>
+              <input
+                className="input"
+                value={valor.rntrc ?? ""}
+                onChange={(e) => onChange({ ...valor, rntrc: e.target.value })}
+              />
+            </Campo>
+            <Campo label="Qtd. dependentes">
+              <input
+                type="number"
+                min={0}
+                className="input"
+                value={valor.qtdDependentes ?? ""}
+                onChange={(e) =>
+                  onChange({ ...valor, qtdDependentes: Number(e.target.value) })
+                }
+              />
+            </Campo>
+          </>
+        )}
+
+        <Campo label="Rua" required>
+          <input
+            className="input"
+            value={valor.endereco.rua}
+            onChange={(e) => onChange({ ...valor, endereco: { ...valor.endereco, rua: e.target.value } })}
+          />
+        </Campo>
+        <Campo label="Número" required>
+          <input
+            className="input"
+            value={valor.endereco.numero}
+            onChange={(e) =>
+              onChange({ ...valor, endereco: { ...valor.endereco, numero: e.target.value } })
+            }
+          />
+        </Campo>
+        <Campo label="Bairro" required>
+          <input
+            className="input"
+            value={valor.endereco.bairro}
+            onChange={(e) =>
+              onChange({ ...valor, endereco: { ...valor.endereco, bairro: e.target.value } })
+            }
+          />
+        </Campo>
+        <Campo label="CEP" required>
+          <input
+            className="input"
+            value={valor.endereco.cep}
+            onChange={(e) =>
+              onChange({ ...valor, endereco: { ...valor.endereco, cep: e.target.value } })
+            }
+          />
+        </Campo>
+        <Campo label="Município" required>
+          <input
+            className="input"
+            value={valor.endereco.municipio}
+            onChange={(e) =>
+              onChange({ ...valor, endereco: { ...valor.endereco, municipio: e.target.value } })
+            }
+          />
+        </Campo>
+        <Campo label="UF">
+          <select
+            className="input"
+            value={valor.endereco.uf}
+            onChange={(e) =>
+              onChange({ ...valor, endereco: { ...valor.endereco, uf: e.target.value } })
+            }
+          >
+            {ESTADOS.map((uf) => (
+              <option key={uf} value={uf}>
+                {uf}
+              </option>
+            ))}
+          </select>
+        </Campo>
+
+        <Campo label="Celular (DDD + número)">
+          <div className="flex gap-2">
+            <input
+              className="input w-16"
+              placeholder="DDD"
+              value={valor.celular?.ddd ?? ""}
+              onChange={(e) =>
+                onChange({ ...valor, celular: { ddd: e.target.value, numero: valor.celular?.numero ?? "" } })
+              }
+            />
+            <input
+              className="input"
+              value={valor.celular?.numero ?? ""}
+              onChange={(e) =>
+                onChange({ ...valor, celular: { ddd: valor.celular?.ddd ?? "", numero: e.target.value } })
+              }
+            />
+          </div>
+        </Campo>
+        <Campo label="Comercial (DDD + número)">
+          <div className="flex gap-2">
+            <input
+              className="input w-16"
+              placeholder="DDD"
+              value={valor.comercial?.ddd ?? ""}
+              onChange={(e) =>
+                onChange({ ...valor, comercial: { ddd: e.target.value, numero: valor.comercial?.numero ?? "" } })
+              }
+            />
+            <input
+              className="input"
+              value={valor.comercial?.numero ?? ""}
+              onChange={(e) =>
+                onChange({ ...valor, comercial: { ddd: valor.comercial?.ddd ?? "", numero: e.target.value } })
+              }
+            />
+          </div>
+        </Campo>
+      </div>
     </fieldset>
   );
 }

@@ -1,6 +1,6 @@
 import https from "https";
 import { randomUUID } from "crypto";
-import type { CiotEmissaoInput, CiotStatus, Transportador } from "./types";
+import type { CiotEmissaoInput, CiotStatus } from "./types";
 
 /**
  * Integração direta com o webservice PEF (Pagamento Eletrônico de Frete) da
@@ -14,6 +14,10 @@ import type { CiotEmissaoInput, CiotStatus, Transportador } from "./types";
  * CNPJ do titular (não há usuário/senha ou bearer token). Cada conta da
  * plataforma fornece o próprio certificado — é o CNPJ dele que a ANTT valida.
  *
+ * O Contratado (quem efetivamente dirige/recebe pelo frete) é informado por
+ * operação, não vem do certificado: a transportadora pode subcontratar
+ * motoristas/veículos diferentes a cada emissão (ex: TAC-Agregado).
+ *
  * O DCS informa textualmente que "no momento da implementação será
  * necessário solicitar à ANTT o host e contexto" — ou seja, os caminhos
  * exatos de cada serviço não são públicos. Os domínios abaixo são os únicos
@@ -25,7 +29,6 @@ export interface AnttCredenciais {
   baseUrl: string;
   pfx: Buffer;
   passphrase: string;
-  transportador: Transportador;
 }
 
 interface DeclaracaoResponse {
@@ -77,14 +80,14 @@ function postJson<T>(
   });
 }
 
-function montarPayloadDeclaracao(input: CiotEmissaoInput, transportador: Transportador) {
+function montarPayloadDeclaracao(input: CiotEmissaoInput) {
   return {
     IdOperacaoTransporte: randomUUID().replace(/-/g, "").slice(0, 12),
     TipoOperacao: input.operacao.tipoOperacao,
-    CpfCnpjContratado: transportador.cpfCnpj.replace(/\D/g, ""),
-    RNTRCContratado: transportador.rntrc,
+    CpfCnpjContratado: input.contratado.cpfCnpj.replace(/\D/g, ""),
+    RNTRCContratado: input.contratado.rntrc,
     CpfCnpjContratante: input.contratante.cnpj.replace(/\D/g, ""),
-    CpfCnpjDestinatario: input.operacao.cpfCnpjDestinatario?.replace(/\D/g, "") || undefined,
+    CpfCnpjDestinatario: input.destinatario.cpfCnpj.replace(/\D/g, "") || undefined,
     ValorFrete: input.operacao.valorFrete,
     DataDeclaracao: new Date().toISOString(),
     IndContingencia: input.operacao.indContingencia,
@@ -144,7 +147,7 @@ export async function emitirCiotAntt(
   mensagemErro?: string;
   dataEmissao: string;
 }> {
-  const payload = montarPayloadDeclaracao(input, credenciais.transportador);
+  const payload = montarPayloadDeclaracao(input);
   const { status, body } = await postJson<DeclaracaoResponse>(
     credenciais,
     "DeclaracaoOperacaoTransporte",

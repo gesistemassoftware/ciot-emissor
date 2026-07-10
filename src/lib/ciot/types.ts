@@ -16,24 +16,53 @@ export interface Contratante {
   razaoSocial: string;
 }
 
-/**
- * Dados do transportador (Contratado perante a ANTT). Não fazem parte do
- * formulário de emissão — vêm do perfil da conta (uma conta = uma ETC),
- * já que o certificado usado na emissão é o do próprio CNPJ do transportador.
- */
+/** Perfil da própria conta (a transportadora/ETC), usado como identidade do certificado. */
 export interface Transportador {
   tipo: TipoTransportador;
-  /** CpfCnpjContratado */
   cpfCnpj: string;
-  /** RNTRCContratado */
   rntrc: string;
 }
 
 export interface Veiculo {
   placa: string;
   numeroEixos: number;
-  /** RNTRCVeiculo, quando o veículo pertence a RNTRC diferente do transportador */
+  /** RNTRCVeiculo, quando o veículo pertence a RNTRC diferente do contratado */
   rntrc?: string;
+}
+
+export interface Endereco {
+  rua: string;
+  numero: string;
+  bairro: string;
+  cep: string;
+  municipio: string;
+  uf: string;
+}
+
+export interface Telefone {
+  ddd: string;
+  numero: string;
+}
+
+export type PapelTerceiro = "destinatario" | "tomador" | "contratado";
+
+/**
+ * Motorista/proprietário do veículo (Contratado), destinatário da carga, ou
+ * tomador do serviço — cadastro reutilizável por CPF/CNPJ, no mesmo padrão
+ * de sistemas de operadoras de CIOT. Só o CPF/CNPJ (e RNTRC, no caso do
+ * contratado) é enviado à ANTT; o resto fica só na plataforma para reuso.
+ */
+export interface Terceiro {
+  cpfCnpj: string;
+  nomeRazaoSocial: string;
+  email?: string;
+  /** RNTRC — só se aplica ao papel "contratado" */
+  rntrc?: string;
+  /** Quantidade de dependentes — só se aplica ao papel "contratado" */
+  qtdDependentes?: number;
+  endereco: Endereco;
+  celular?: Telefone;
+  comercial?: Telefone;
 }
 
 export interface Operacao {
@@ -53,7 +82,6 @@ export interface Operacao {
   pesoCargaKg: number;
   codigoTipoCarga: CodigoTipoCarga;
   valorFrete: number;
-  cpfCnpjDestinatario?: string;
   /** obrigatórios pela ANTT quando tipoOperacao = 1 (Carga Lotação) */
   indAltoDesempenho: boolean;
   indRetornoVazio: boolean;
@@ -76,9 +104,16 @@ export interface Pagamento {
   valorParcela?: number;
 }
 
-/** Dados preenchidos a cada emissão. O transportador vem do perfil da conta. */
+/**
+ * Dados preenchidos a cada emissão. Contratado, destinatário e tomador são
+ * cadastros reutilizáveis (buscados/salvos por CPF/CNPJ) — a transportadora
+ * (conta) pode subcontratar motoristas/veículos diferentes a cada operação.
+ */
 export interface CiotEmissaoInput {
   contratante: Contratante;
+  contratado: Terceiro;
+  destinatario: Terceiro;
+  tomador: Terceiro;
   veiculo: Veiculo;
   operacao: Operacao;
   pagamento: Pagamento;

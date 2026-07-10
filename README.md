@@ -35,6 +35,14 @@ Sem `DATABASE_URL` configurado, os dados ficam num banco Postgres embarcado
 4. Com certificado, cada emissão chama de verdade o webservice
    `DeclaracaoOperacaoTransporte` da ANTT, usando o certificado e os dados de
    transportador daquela conta.
+5. Cada emissão também informa **Contratado/Proprietário do Veículo**,
+   **Destinatário** e **Tomador do Serviço** — cadastros reutilizáveis por
+   CPF/CNPJ (a transportadora pode subcontratar motoristas/veículos diferentes
+   a cada operação, ex: TAC-Agregado). Ao digitar um CPF/CNPJ já usado antes,
+   os demais campos são preenchidos automaticamente; só o CPF/CNPJ (e RNTRC,
+   no caso do contratado) é enviado à ANTT — o resto (endereço, contato) fica
+   guardado na plataforma só para reaproveitamento, no mesmo padrão usado por
+   sistemas de operadoras de CIOT.
 
 ## Pré-requisitos reais (fora do código) — por cliente
 
@@ -89,6 +97,7 @@ precisariam reenviar o arquivo.
 - `src/lib/ciot/anttClient.ts` — integração real com a ANTT (TLS mútuo com certificado do cliente)
 - `src/lib/ciot/provider.ts` — escolhe entre chamada real e modo simulado
 - `src/lib/ciot/store.ts` — emissões persistidas no banco, escopadas por conta
+- `src/lib/ciot/terceiros.ts` — cadastro reutilizável de contratado/destinatário/tomador por CPF/CNPJ
 - `src/middleware.ts` — protege as rotas, redireciona para `/login` sem sessão
 - `src/app/cadastro`, `src/app/login` — telas de conta
 - `src/app/configuracoes` — perfil da transportadora + upload de certificado
