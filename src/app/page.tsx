@@ -93,6 +93,17 @@ function formatarMoeda(valor: number) {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+interface MunicipioResultado {
+  codigo: string;
+  nome: string;
+  uf: string;
+}
+
+interface NaturezaCargaResultado {
+  codigo: string;
+  descricao: string;
+}
+
 async function buscarTerceiro(papel: PapelTerceiro, cpfCnpj: string): Promise<Terceiro | null> {
   if (!cpfCnpj) return null;
   const res = await fetch(`/api/terceiros?papel=${papel}&cpfCnpj=${encodeURIComponent(cpfCnpj)}`);
@@ -113,6 +124,7 @@ export default function Home() {
   const [calculandoPiso, setCalculandoPiso] = useState(false);
   const [pisoMinimo, setPisoMinimo] = useState<PisoMinimoResultado | null>(null);
   const [erroPiso, setErroPiso] = useState<string | null>(null);
+  const [abaOperacao, setAbaOperacao] = useState<"carga" | "viagens">("carga");
 
   async function carregarHistorico() {
     setCarregandoHistorico(true);
@@ -251,6 +263,54 @@ export default function Home() {
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Campo label="Tipo de operação">
+            <select
+              className="input"
+              value={form.operacao.tipoOperacao}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  operacao: {
+                    ...f.operacao,
+                    tipoOperacao: Number(e.target.value) as TipoOperacao,
+                  },
+                }))
+              }
+            >
+              <option value={1}>1 - Carga Lotação</option>
+              <option value={2}>2 - Carga Fracionada</option>
+              <option value={3}>3 - TAC-Agregado</option>
+            </select>
+          </Campo>
+          <Campo label="Data início da viagem" required>
+            <input
+              type="date"
+              className="input"
+              value={form.operacao.dataInicioViagem}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  operacao: { ...f.operacao, dataInicioViagem: e.target.value },
+                }))
+              }
+            />
+          </Campo>
+          <Campo label="Data fim da viagem" required>
+            <input
+              type="date"
+              className="input"
+              value={form.operacao.dataFimViagem}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  operacao: { ...f.operacao, dataFimViagem: e.target.value },
+                }))
+              }
+            />
+          </Campo>
+        </div>
+
         <Secao titulo="Contratante">
           <Campo label="CNPJ/CPF do contratante" required>
             <input
@@ -389,228 +449,197 @@ export default function Home() {
           </Secao>
         )}
 
-        <Secao titulo="Operação de transporte">
-          <Campo label="Tipo de operação">
-            <select
-              className="input"
-              value={form.operacao.tipoOperacao}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: {
-                    ...f.operacao,
-                    tipoOperacao: Number(e.target.value) as TipoOperacao,
-                  },
-                }))
+        <fieldset className="border border-neutral-200 rounded-xl p-5">
+          <legend className="px-2 text-sm font-semibold text-neutral-700">
+            Operação de transporte
+          </legend>
+
+          <div className="flex gap-2 mb-4 border-b border-neutral-200">
+            <button
+              type="button"
+              onClick={() => setAbaOperacao("carga")}
+              className={
+                "px-4 py-2 text-sm font-medium border-b-2 -mb-px cursor-pointer " +
+                (abaOperacao === "carga"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700")
               }
             >
-              <option value={1}>1 - Carga Lotação</option>
-              <option value={2}>2 - Carga Fracionada</option>
-              <option value={3}>3 - TAC-Agregado</option>
-            </select>
-          </Campo>
-          <Campo label="Código IBGE do município de origem" required>
-            <input
-              className="input"
-              value={form.operacao.codigoMunicipioOrigem}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, codigoMunicipioOrigem: e.target.value },
-                }))
-              }
-              placeholder="Ex: 5002704"
-            />
-          </Campo>
-          <Campo label="Município de origem (referência local)">
-            <input
-              className="input"
-              value={form.operacao.nomeMunicipioOrigem}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, nomeMunicipioOrigem: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="Código IBGE do município de destino" required>
-            <input
-              className="input"
-              value={form.operacao.codigoMunicipioDestino}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, codigoMunicipioDestino: e.target.value },
-                }))
-              }
-              placeholder="Ex: 3550308"
-            />
-          </Campo>
-          <Campo label="Município de destino (referência local)">
-            <input
-              className="input"
-              value={form.operacao.nomeMunicipioDestino}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, nomeMunicipioDestino: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="Distância percorrida (km)">
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min={0}
-                className="input"
-                value={form.operacao.distanciaPercorridaKm}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    operacao: { ...f.operacao, distanciaPercorridaKm: Number(e.target.value) },
-                  }))
-                }
-              />
-              <button
-                type="button"
-                onClick={handleCalcularDistancia}
-                disabled={calculandoDistancia}
-                className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
-                title="Calcular distância entre origem e destino (roteirizador)"
-              >
-                {calculandoDistancia ? "Calculando..." : "Calcular"}
-              </button>
-            </div>
-            {erroDistancia && <p className="text-xs text-red-600 mt-1">{erroDistancia}</p>}
-          </Campo>
-          <Campo label="Data início da viagem" required>
-            <input
-              type="date"
-              className="input"
-              value={form.operacao.dataInicioViagem}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, dataInicioViagem: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="Data fim da viagem" required>
-            <input
-              type="date"
-              className="input"
-              value={form.operacao.dataFimViagem}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, dataFimViagem: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="Código da natureza da carga" required>
-            <input
-              className="input"
-              value={form.operacao.codigoNaturezaCarga}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, codigoNaturezaCarga: e.target.value },
-                }))
-              }
-              placeholder="Conforme tabela oficial ANTT"
-            />
-          </Campo>
-          <Campo label="Peso da carga (kg)">
-            <input
-              type="number"
-              min={0}
-              className="input"
-              value={form.operacao.pesoCargaKg}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, pesoCargaKg: Number(e.target.value) },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="Código do tipo de carga" required>
-            <select
-              className="input"
-              value={form.operacao.codigoTipoCarga}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: {
-                    ...f.operacao,
-                    codigoTipoCarga: e.target.value as CodigoTipoCarga,
-                  },
-                }))
+              Carga
+            </button>
+            <button
+              type="button"
+              onClick={() => setAbaOperacao("viagens")}
+              className={
+                "px-4 py-2 text-sm font-medium border-b-2 -mb-px cursor-pointer " +
+                (abaOperacao === "viagens"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-neutral-500 hover:text-neutral-700")
               }
             >
-              {TIPOS_CARGA.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <Campo label="Valor do frete (R$)" required>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                className="input"
-                value={form.operacao.valorFrete}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    operacao: { ...f.operacao, valorFrete: Number(e.target.value) },
-                  }))
-                }
-              />
-              <button
-                type="button"
-                onClick={handleCalcularPiso}
-                disabled={calculandoPiso}
-                className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
-                title="Consultar piso mínimo de frete na calculadora oficial da ANTT"
-              >
-                {calculandoPiso ? "Calculando..." : "Piso mínimo ANTT"}
-              </button>
-            </div>
-            {erroPiso && <p className="text-xs text-red-600 mt-1">{erroPiso}</p>}
-            {pisoMinimo && (
-              <div className="text-xs text-neutral-600 mt-1 bg-neutral-50 border border-neutral-200 rounded-lg p-2">
-                Piso mínimo ANTT:{" "}
-                <strong>
-                  {pisoMinimo.valorPiso.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  })}
-                </strong>
-                {pisoMinimo.tabela && <> · {pisoMinimo.tabela}</>}
-                <button
-                  type="button"
-                  className="ml-2 text-blue-600 hover:underline cursor-pointer"
-                  onClick={() =>
+              Viagens
+            </button>
+          </div>
+
+          {abaOperacao === "carga" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Campo label="Valor do frete (R$)" required>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="input"
+                    value={form.operacao.valorFrete}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        operacao: { ...f.operacao, valorFrete: Number(e.target.value) },
+                      }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCalcularPiso}
+                    disabled={calculandoPiso}
+                    className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+                    title="Consultar piso mínimo de frete na calculadora oficial da ANTT"
+                  >
+                    {calculandoPiso ? "Calculando..." : "Piso mínimo ANTT"}
+                  </button>
+                </div>
+                {erroPiso && <p className="text-xs text-red-600 mt-1">{erroPiso}</p>}
+                {pisoMinimo && (
+                  <div className="text-xs text-neutral-600 mt-1 bg-neutral-50 border border-neutral-200 rounded-lg p-2">
+                    Piso mínimo ANTT:{" "}
+                    <strong>
+                      {pisoMinimo.valorPiso.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </strong>
+                    {pisoMinimo.tabela && <> · {pisoMinimo.tabela}</>}
+                    <button
+                      type="button"
+                      className="ml-2 text-blue-600 hover:underline cursor-pointer"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          operacao: { ...f.operacao, valorFrete: pisoMinimo.valorPiso },
+                        }))
+                      }
+                    >
+                      usar este valor
+                    </button>
+                  </div>
+                )}
+              </Campo>
+              <Campo label="Peso da carga (kg)">
+                <input
+                  type="number"
+                  min={0}
+                  className="input"
+                  value={form.operacao.pesoCargaKg}
+                  onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      operacao: { ...f.operacao, valorFrete: pisoMinimo.valorPiso },
+                      operacao: { ...f.operacao, pesoCargaKg: Number(e.target.value) },
+                    }))
+                  }
+                />
+              </Campo>
+              <NaturezaCargaAutocomplete
+                codigoAtual={form.operacao.codigoNaturezaCarga}
+                onSelect={(n) =>
+                  setForm((f) => ({
+                    ...f,
+                    operacao: { ...f.operacao, codigoNaturezaCarga: n.codigo },
+                  }))
+                }
+              />
+              <Campo label="Código do tipo de carga" required>
+                <select
+                  className="input"
+                  value={form.operacao.codigoTipoCarga}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      operacao: {
+                        ...f.operacao,
+                        codigoTipoCarga: e.target.value as CodigoTipoCarga,
+                      },
                     }))
                   }
                 >
-                  usar este valor
-                </button>
-              </div>
-            )}
-          </Campo>
-        </Secao>
+                  {TIPOS_CARGA.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+            </div>
+          )}
+
+          {abaOperacao === "viagens" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <MunicipioAutocomplete
+                label="Origem"
+                nomeAtual={form.operacao.nomeMunicipioOrigem}
+                onSelect={(m) =>
+                  setForm((f) => ({
+                    ...f,
+                    operacao: {
+                      ...f.operacao,
+                      codigoMunicipioOrigem: m.codigo,
+                      nomeMunicipioOrigem: `${m.nome}/${m.uf}`,
+                    },
+                  }))
+                }
+              />
+              <MunicipioAutocomplete
+                label="Destino"
+                nomeAtual={form.operacao.nomeMunicipioDestino}
+                onSelect={(m) =>
+                  setForm((f) => ({
+                    ...f,
+                    operacao: {
+                      ...f.operacao,
+                      codigoMunicipioDestino: m.codigo,
+                      nomeMunicipioDestino: `${m.nome}/${m.uf}`,
+                    },
+                  }))
+                }
+              />
+              <Campo label="Distância percorrida (km)">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    className="input"
+                    value={form.operacao.distanciaPercorridaKm}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        operacao: { ...f.operacao, distanciaPercorridaKm: Number(e.target.value) },
+                      }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCalcularDistancia}
+                    disabled={calculandoDistancia}
+                    className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+                    title="Calcular distância entre origem e destino (roteirizador)"
+                  >
+                    {calculandoDistancia ? "Calculando..." : "Calcular"}
+                  </button>
+                </div>
+                {erroDistancia && <p className="text-xs text-red-600 mt-1">{erroDistancia}</p>}
+              </Campo>
+            </div>
+          )}
+        </fieldset>
 
         <Secao titulo="Indicadores operacionais (obrigatórios para Carga Lotação)">
           <Checkbox
@@ -1322,6 +1351,148 @@ function TerceiroSecao({
         </Campo>
       </div>
     </fieldset>
+  );
+}
+
+function MunicipioAutocomplete({
+  label,
+  nomeAtual,
+  onSelect,
+}: {
+  label: string;
+  nomeAtual?: string;
+  onSelect: (m: MunicipioResultado) => void;
+}) {
+  const [query, setQuery] = useState(nomeAtual ?? "");
+  const [resultados, setResultados] = useState<MunicipioResultado[]>([]);
+  const [mostrando, setMostrando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResultados([]);
+      return;
+    }
+    setBuscando(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/municipios?q=${encodeURIComponent(query)}`);
+        setResultados(res.ok ? await res.json() : []);
+      } finally {
+        setBuscando(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  return (
+    <Campo label={label} required>
+      <div className="relative">
+        <input
+          className="input"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setMostrando(true);
+          }}
+          onFocus={() => setMostrando(true)}
+          onBlur={() => setTimeout(() => setMostrando(false), 150)}
+          placeholder="Digite o nome da cidade..."
+        />
+        {mostrando && (buscando || resultados.length > 0) && (
+          <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-neutral-200 bg-white shadow-lg text-sm">
+            {buscando && <li className="px-3 py-2 text-neutral-400">Buscando...</li>}
+            {resultados.map((m) => (
+              <li key={m.codigo}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect(m);
+                    setQuery(`${m.nome}/${m.uf}`);
+                    setMostrando(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-neutral-50 cursor-pointer"
+                >
+                  {m.nome}/{m.uf}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Campo>
+  );
+}
+
+function NaturezaCargaAutocomplete({
+  codigoAtual,
+  onSelect,
+}: {
+  codigoAtual: string;
+  onSelect: (n: NaturezaCargaResultado) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [resultados, setResultados] = useState<NaturezaCargaResultado[]>([]);
+  const [mostrando, setMostrando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResultados([]);
+      return;
+    }
+    setBuscando(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/natureza-carga?q=${encodeURIComponent(query)}`);
+        setResultados(res.ok ? await res.json() : []);
+      } finally {
+        setBuscando(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  return (
+    <Campo label="Natureza da carga" required>
+      <div className="relative">
+        <input
+          className="input"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setMostrando(true);
+          }}
+          onFocus={() => setMostrando(true)}
+          onBlur={() => setTimeout(() => setMostrando(false), 150)}
+          placeholder="Busque por código ou descrição (ex: soja, 1201)"
+        />
+        {codigoAtual && !mostrando && (
+          <p className="text-xs text-neutral-500 mt-1">Código selecionado: {codigoAtual}</p>
+        )}
+        {mostrando && (buscando || resultados.length > 0) && (
+          <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-neutral-200 bg-white shadow-lg text-sm">
+            {buscando && <li className="px-3 py-2 text-neutral-400">Buscando...</li>}
+            {resultados.map((n) => (
+              <li key={n.codigo}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect(n);
+                    setQuery(`${n.codigo} - ${n.descricao}`);
+                    setMostrando(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-neutral-50 cursor-pointer"
+                >
+                  <span className="font-mono text-xs text-neutral-500">{n.codigo}</span>{" "}
+                  {n.descricao}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Campo>
   );
 }
 

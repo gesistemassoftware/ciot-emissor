@@ -50,6 +50,11 @@ Sem `DATABASE_URL` configurado, os dados ficam num banco Postgres embarcado
    histórico ganha ações **Cancelar**, **Encerrar** e **Consultar status**,
    que chamam `CancelamentoOperacaoTransporte`, `EncerramentoOperacaoTransporte`
    e `ConsultarCIOTGerado` na ANTT.
+8. Tipo de operação e datas da viagem ficam no topo da tela; o restante da
+   "Operação de transporte" é dividido em duas abas — **Carga** (frete, peso,
+   natureza e tipo de carga) e **Viagens** (origem/destino por busca de
+   cidade, distância) — para reduzir a quantidade de campos visíveis de uma
+   vez.
 
 ## Integrações auxiliares
 
@@ -89,12 +94,17 @@ Sem `DATABASE_URL` configurado, os dados ficam num banco Postgres embarcado
 
 ### Códigos e tabelas oficiais da ANTT
 
-Estes campos exigem valores de tabelas mantidas pela ANTT que não estão
-reproduzidas neste projeto — consulte o DCS/portal da ANTT:
-
-- `codigoMunicipioOrigem` / `codigoMunicipioDestino`: código IBGE do
-  município.
-- `codigoNaturezaCarga`: tabela oficial de Natureza de Carga.
+- `codigoMunicipioOrigem` / `codigoMunicipioDestino`: buscados por nome da
+  cidade na aba "Viagens" (autocomplete), a partir de `src/lib/data/municipios.json`
+  (snapshot da lista de municípios do IBGE — 5.571 registros).
+- `codigoNaturezaCarga`: buscado por descrição ou código na aba "Carga"
+  (autocomplete), a partir de `src/lib/data/naturezaCarga.json` — os 3 códigos
+  especiais definidos pela ANTT (0001 carga diversa, 0002 embalagens/paletes
+  vazios usados, 0003 embalagens contaminadas vazias) mais os 957 códigos de
+  4 dígitos ("posição") do Sistema Harmonizado (NCM), conforme instruções de
+  cadastramento da ANTT. Gerado a partir da tabela oficial do Siscomex/CAMEX;
+  como a NCM é atualizada periodicamente por resolução, revalide esse
+  snapshot de tempos em tempos.
 
 ## Deploy no Vercel
 
@@ -129,6 +139,8 @@ precisariam reenviar o arquivo.
 - `src/lib/ciot/terceiros.ts` — cadastro reutilizável de contratado/destinatário/tomador por CPF/CNPJ
 - `src/lib/distancia.ts` — roteirizador (distância entre municípios via IBGE + Nominatim + OSRM)
 - `src/lib/pisoMinimo.ts` — integração com a calculadora de Piso Mínimo de Frete da ANTT
+- `src/lib/data/municipios.ts` + `municipios.json` — busca de município por nome (autocomplete)
+- `src/lib/data/naturezaCarga.ts` + `naturezaCarga.json` — busca de natureza da carga por código/descrição (autocomplete)
 - `src/proxy.ts` — protege as rotas, redireciona para `/login` sem sessão (convenção "Proxy" do Next.js 16, antigo `middleware.ts`)
 - `src/app/cadastro`, `src/app/login` — telas de conta
 - `src/app/configuracoes` — perfil da transportadora + upload de certificado
