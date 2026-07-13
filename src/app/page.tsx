@@ -61,7 +61,7 @@ const FORM_INICIAL: CiotEmissaoInput = {
   destinatario: { ...TERCEIRO_VAZIO },
   tomador: { ...TERCEIRO_VAZIO },
   veiculo: { placa: "", numeroEixos: 2, rntrc: "" },
-  implemento: { placa: "", numeroEixos: 2, rntrc: "" },
+  implementos: [],
   operacao: {
     tipoOperacao: 1,
     codigoMunicipioOrigem: "",
@@ -80,11 +80,14 @@ const FORM_INICIAL: CiotEmissaoInput = {
     composicaoVeicular: false,
     indContingencia: false,
     justificativaContingencia: "",
+    contratantesCargaFrac: [],
   },
   pagamento: {
     tipoPagamento: 6,
     chavePix: "",
     cpfCnpjCreditado: "",
+    codigoPagamento: "",
+    identificadorPix: "",
     indPagamento: 0,
   },
 };
@@ -102,6 +105,16 @@ interface MunicipioResultado {
 interface NaturezaCargaResultado {
   codigo: string;
   descricao: string;
+}
+
+interface BancoResultado {
+  codigo: string;
+  nome: string;
+}
+
+interface ContaResumo {
+  anttAmbiente: "homologacao" | "producao";
+  certificadoConfigurado: boolean;
 }
 
 async function buscarTerceiro(papel: PapelTerceiro, cpfCnpj: string): Promise<Terceiro | null> {
@@ -125,6 +138,53 @@ export default function Home() {
   const [pisoMinimo, setPisoMinimo] = useState<PisoMinimoResultado | null>(null);
   const [erroPiso, setErroPiso] = useState<string | null>(null);
   const [abaOperacao, setAbaOperacao] = useState<"carga" | "viagens">("carga");
+  const [conta, setConta] = useState<ContaResumo | null>(null);
+  const [alterandoAmbiente, setAlterandoAmbiente] = useState(false);
+  const [novoContratanteFrac, setNovoContratanteFrac] = useState("");
+
+  function adicionarContratanteFrac() {
+    const valor = novoContratanteFrac.trim();
+    if (!valor) return;
+    setForm((f) => ({
+      ...f,
+      operacao: {
+        ...f.operacao,
+        contratantesCargaFrac: [...(f.operacao.contratantesCargaFrac ?? []), valor],
+      },
+    }));
+    setNovoContratanteFrac("");
+  }
+
+  function removerContratanteFrac(index: number) {
+    setForm((f) => ({
+      ...f,
+      operacao: {
+        ...f.operacao,
+        contratantesCargaFrac: (f.operacao.contratantesCargaFrac ?? []).filter((_, i) => i !== index),
+      },
+    }));
+  }
+
+  async function carregarConta() {
+    const res = await fetch("/api/config");
+    if (res.ok) setConta(await res.json());
+  }
+
+  async function handleAlternarAmbiente() {
+    if (!conta) return;
+    const novoAmbiente = conta.anttAmbiente === "homologacao" ? "producao" : "homologacao";
+    setAlterandoAmbiente(true);
+    try {
+      await fetch("/api/config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anttAmbiente: novoAmbiente }),
+      });
+      await carregarConta();
+    } finally {
+      setAlterandoAmbiente(false);
+    }
+  }
 
   async function carregarHistorico() {
     setCarregandoHistorico(true);
@@ -139,6 +199,7 @@ export default function Home() {
 
   useEffect(() => {
     carregarHistorico();
+    carregarConta();
   }, []);
 
   async function handleLogout() {
@@ -262,6 +323,34 @@ export default function Home() {
             </button>
           </div>
         </header>
+
+        {conta && (
+          <div
+            className={
+              "mb-6 flex items-center justify-between gap-4 rounded-lg border px-4 py-2.5 text-sm " +
+              (conta.anttAmbiente === "homologacao"
+                ? "border-amber-300 bg-amber-50 text-amber-800"
+                : "border-emerald-300 bg-emerald-50 text-emerald-800")
+            }
+          >
+            <span>
+              Ambiente atual: <strong>{conta.anttAmbiente === "homologacao" ? "Homologação (testes)" : "Produção"}</strong>
+              {!conta.certificadoConfigurado && " · sem certificado cadastrado, emissão roda em modo simulado"}
+            </span>
+            <button
+              type="button"
+              onClick={handleAlternarAmbiente}
+              disabled={alterandoAmbiente}
+              className="shrink-0 rounded-md border border-current/30 px-3 py-1 text-xs font-medium hover:bg-white/50 disabled:opacity-50 cursor-pointer"
+            >
+              {alterandoAmbiente
+                ? "Alterando..."
+                : conta.anttAmbiente === "homologacao"
+                ? "Mudar para produção"
+                : "Mudar para homologação (testes)"}
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="card p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -451,51 +540,85 @@ export default function Home() {
           </Secao>
 
           {form.operacao.composicaoVeicular && (
-            <Secao titulo="Implemento (reboque/semirreboque)">
-              <Campo label="Placa" required>
-                <input
-                  className="input uppercase"
-                  value={form.implemento?.placa ?? ""}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), placa: e.target.value },
-                    }))
-                  }
-                  placeholder="ABC1D23"
-                />
-              </Campo>
-              <Campo label="Número de eixos" required>
-                <input
-                  type="number"
-                  min={1}
-                  max={9}
-                  className="input"
-                  value={form.implemento?.numeroEixos ?? 2}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      implemento: {
-                        ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }),
-                        numeroEixos: Number(e.target.value),
-                      },
-                    }))
-                  }
-                />
-              </Campo>
-              <Campo label="RNTRC do implemento (se diferente do contratado)">
-                <input
-                  className="input"
-                  value={form.implemento?.rntrc ?? ""}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), rntrc: e.target.value },
-                    }))
-                  }
-                />
-              </Campo>
-            </Secao>
+            <fieldset className="card p-5">
+              <legend className="px-2 text-sm font-semibold text-navy-800">
+                Implementos (reboque/semirreboque)
+              </legend>
+              <p className="text-xs text-navy-500 mb-3">
+                A ANTT aceita até 5 placas por operação (veículo + até 4 implementos).
+              </p>
+              <div className="space-y-3">
+                {(form.implementos ?? []).map((implemento, i) => (
+                  <div key={i} className="flex gap-2 items-end border border-navy-100 rounded-lg p-3">
+                    <Campo label="Placa" required className="flex-1">
+                      <input
+                        className="input uppercase"
+                        value={implemento.placa}
+                        onChange={(e) => {
+                          const novos = [...(form.implementos ?? [])];
+                          novos[i] = { ...novos[i], placa: e.target.value };
+                          setForm((f) => ({ ...f, implementos: novos }));
+                        }}
+                        placeholder="ABC1D23"
+                      />
+                    </Campo>
+                    <Campo label="Eixos" required className="w-20">
+                      <input
+                        type="number"
+                        min={1}
+                        max={9}
+                        className="input"
+                        value={implemento.numeroEixos}
+                        onChange={(e) => {
+                          const novos = [...(form.implementos ?? [])];
+                          novos[i] = { ...novos[i], numeroEixos: Number(e.target.value) };
+                          setForm((f) => ({ ...f, implementos: novos }));
+                        }}
+                      />
+                    </Campo>
+                    <Campo label="RNTRC (se diferente)" className="flex-1">
+                      <input
+                        className="input"
+                        value={implemento.rntrc ?? ""}
+                        onChange={(e) => {
+                          const novos = [...(form.implementos ?? [])];
+                          novos[i] = { ...novos[i], rntrc: e.target.value };
+                          setForm((f) => ({ ...f, implementos: novos }));
+                        }}
+                      />
+                    </Campo>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const novos = (form.implementos ?? []).filter((_, idx) => idx !== i);
+                        setForm((f) => ({ ...f, implementos: novos }));
+                      }}
+                      className="btn-icon border-red-200 text-red-600 hover:bg-red-50"
+                      aria-label={`Remover implemento ${i + 1}`}
+                      title="Remover implemento"
+                    >
+                      <IconeLixeira />
+                    </button>
+                  </div>
+                ))}
+                {(form.implementos ?? []).length === 0 && (
+                  <p className="text-sm text-navy-400">Nenhum implemento adicionado ainda.</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    implementos: [...(f.implementos ?? []), { placa: "", numeroEixos: 2, rntrc: "" }],
+                  }))
+                }
+                disabled={(form.implementos ?? []).length >= 4}
+                className="btn-ghost mt-3 disabled:opacity-50"
+              >
+                + Adicionar implemento
+              </button>
+            </fieldset>
           )}
 
           <fieldset className="card p-5">
@@ -627,6 +750,55 @@ export default function Home() {
                     ))}
                   </select>
                 </Campo>
+
+                {form.operacao.tipoOperacao === 2 && (
+                  <div className="sm:col-span-2">
+                    <span className="text-sm text-navy-600">
+                      Outros contratantes da carga fracionada <span className="text-red-500">*</span>
+                    </span>
+                    <p className="text-xs text-navy-400 mb-2">
+                      Obrigatório para Carga Fracionada — CPF/CNPJ de cada contratante adicional
+                      da mesma viagem.
+                    </p>
+                    {(form.operacao.contratantesCargaFrac?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {form.operacao.contratantesCargaFrac!.map((cpfCnpj, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1.5 bg-navy-100 text-navy-800 text-xs rounded-full pl-3 pr-2 py-1"
+                          >
+                            {cpfCnpj}
+                            <button
+                              type="button"
+                              onClick={() => removerContratanteFrac(i)}
+                              className="hover:text-red-600 cursor-pointer"
+                              aria-label={`Remover ${cpfCnpj}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        className="input"
+                        placeholder="CPF/CNPJ"
+                        value={novoContratanteFrac}
+                        onChange={(e) => setNovoContratanteFrac(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            adicionarContratanteFrac();
+                          }
+                        }}
+                      />
+                      <button type="button" onClick={adicionarContratanteFrac} className="btn-ghost whitespace-nowrap">
+                        Adicionar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -724,36 +896,60 @@ export default function Home() {
                 }
               />
             </Campo>
+            <Campo label="Código do pagamento (referência, opcional)">
+              <input
+                className="input"
+                value={form.pagamento.codigoPagamento ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    pagamento: { ...f.pagamento, codigoPagamento: e.target.value },
+                  }))
+                }
+                placeholder="Ex: código de boleto, id de depósito"
+              />
+            </Campo>
 
             {form.pagamento.tipoPagamento === 6 && (
-              <Campo label="Chave Pix">
-                <input
-                  className="input"
-                  value={form.pagamento.chavePix}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      pagamento: { ...f.pagamento, chavePix: e.target.value },
-                    }))
-                  }
-                />
-              </Campo>
-            )}
-
-            {[2, 3, 4].includes(form.pagamento.tipoPagamento) && (
               <>
-                <Campo label="Código da instituição financeira">
+                <Campo label="Chave Pix">
                   <input
                     className="input"
-                    value={form.pagamento.codigoInstituicaoFinanceira}
+                    value={form.pagamento.chavePix}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
-                        pagamento: { ...f.pagamento, codigoInstituicaoFinanceira: e.target.value },
+                        pagamento: { ...f.pagamento, chavePix: e.target.value },
                       }))
                     }
                   />
                 </Campo>
+                <Campo label="Identificador Pix" required>
+                  <input
+                    className="input"
+                    value={form.pagamento.identificadorPix ?? ""}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        pagamento: { ...f.pagamento, identificadorPix: e.target.value },
+                      }))
+                    }
+                  />
+                </Campo>
+              </>
+            )}
+
+            {[2, 3, 4].includes(form.pagamento.tipoPagamento) && (
+              <>
+                <InstituicaoFinanceiraAutocomplete
+                  codigoAtual={form.pagamento.codigoInstituicaoFinanceira}
+                  onSelect={(b) =>
+                    setForm((f) => ({
+                      ...f,
+                      pagamento: { ...f.pagamento, codigoInstituicaoFinanceira: b.codigo },
+                    }))
+                  }
+                />
                 <Campo label="Agência">
                   <input
                     className="input"
@@ -1102,6 +1298,27 @@ function IconeLupa({ className }: { className?: string }) {
     >
       <circle cx="11" cy="11" r="7" />
       <path d="m21 21-4.35-4.35" />
+    </svg>
+  );
+}
+
+function IconeLixeira({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className ?? "w-4 h-4"}
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   );
 }
@@ -1511,6 +1728,80 @@ function NaturezaCargaAutocomplete({
                 >
                   <span className="font-mono text-xs text-navy-400">{n.codigo}</span>{" "}
                   {n.descricao}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Campo>
+  );
+}
+
+function InstituicaoFinanceiraAutocomplete({
+  codigoAtual,
+  onSelect,
+}: {
+  codigoAtual?: string;
+  onSelect: (b: BancoResultado) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [resultados, setResultados] = useState<BancoResultado[]>([]);
+  const [mostrando, setMostrando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResultados([]);
+      return;
+    }
+    setBuscando(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/bancos?q=${encodeURIComponent(query)}`);
+        setResultados(res.ok ? await res.json() : []);
+      } finally {
+        setBuscando(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  return (
+    <Campo label="Instituição financeira" required>
+      <div className="relative">
+        <div className="relative">
+          <input
+            className="input pl-8"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setMostrando(true);
+            }}
+            onFocus={() => setMostrando(true)}
+            onBlur={() => setTimeout(() => setMostrando(false), 150)}
+            placeholder="Busque por nome ou código (ex: Itaú, 341)"
+          />
+          <IconeLupa className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-navy-300" />
+        </div>
+        {codigoAtual && !mostrando && (
+          <p className="text-xs text-navy-500 mt-1">Código selecionado: {codigoAtual}</p>
+        )}
+        {mostrando && (buscando || resultados.length > 0) && (
+          <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-navy-100 bg-white shadow-lg text-sm">
+            {buscando && <li className="px-3 py-2 text-navy-300">Buscando...</li>}
+            {resultados.map((b, i) => (
+              <li key={`${b.codigo}-${i}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect(b);
+                    setQuery(`${b.codigo} - ${b.nome}`);
+                    setMostrando(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-navy-50 cursor-pointer"
+                >
+                  <span className="font-mono text-xs text-navy-400">{b.codigo}</span> {b.nome}
                 </button>
               </li>
             ))}

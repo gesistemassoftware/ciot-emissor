@@ -88,6 +88,8 @@ export interface Operacao {
   composicaoVeicular: boolean;
   indContingencia: boolean;
   justificativaContingencia?: string;
+  /** CPF/CNPJ de outros contratantes da carga — obrigatório quando tipoOperacao = 2 (Carga Fracionada) */
+  contratantesCargaFrac?: string[];
 }
 
 export interface Pagamento {
@@ -97,6 +99,10 @@ export interface Pagamento {
   numeroConta?: string;
   chavePix?: string;
   cpfCnpjCreditado?: string;
+  /** Código/referência do pagamento (ex: código de boleto, identificador de depósito) */
+  codigoPagamento?: string;
+  /** Identificador da transação Pix — obrigatório quando tipoPagamento = 6, distinto da ChavePix */
+  identificadorPix?: string;
   /** 0 = à vista; 1 = a prazo */
   indPagamento: 0 | 1;
   numeroParcela?: number;
@@ -115,8 +121,12 @@ export interface CiotEmissaoInput {
   destinatario: Terceiro;
   tomador: Terceiro;
   veiculo: Veiculo;
-  /** Segunda unidade (reboque/semirreboque), quando operacao.composicaoVeicular = true */
-  implemento?: Veiculo;
+  /**
+   * Unidades adicionais (reboque/semirreboque), quando operacao.composicaoVeicular
+   * = true. A ANTT aceita até 5 placas por operação de transporte (veículo
+   * principal + até 4 implementos).
+   */
+  implementos?: Veiculo[];
   operacao: Operacao;
   pagamento: Pagamento;
 }

@@ -43,9 +43,10 @@ Sem `DATABASE_URL` configurado, os dados ficam num banco Postgres embarcado
    no caso do contratado) é enviado à ANTT — o resto (endereço, contato) fica
    guardado na plataforma só para reaproveitamento, no mesmo padrão usado por
    sistemas de operadoras de CIOT.
-6. Quando **Composição veicular = sim**, aparece a seção **Implemento**
-   (reboque/semirreboque) — vira uma segunda entrada no array `Veiculos` da
-   declaração.
+6. Quando **Composição veicular = sim**, aparece a seção **Implementos**
+   (reboque/semirreboque) — lista com adicionar/remover, até 4 implementos
+   (a ANTT aceita até 5 placas por operação, incluindo o veículo principal).
+   Cada um vira uma entrada adicional no array `Veiculos` da declaração.
 7. Depois de emitido (status EMITIDO, fora do modo simulado), cada linha do
    histórico ganha ações **Cancelar**, **Encerrar** e **Consultar status**,
    que chamam `CancelamentoOperacaoTransporte`, `EncerramentoOperacaoTransporte`
@@ -55,6 +56,15 @@ Sem `DATABASE_URL` configurado, os dados ficam num banco Postgres embarcado
    natureza e tipo de carga) e **Viagens** (origem/destino por busca de
    cidade, distância) — para reduzir a quantidade de campos visíveis de uma
    vez.
+9. Quando **Tipo de operação = Carga Fracionada**, aparece um campo para
+   listar os **outros contratantes** da mesma viagem (`ContratantesCargaFrac`,
+   obrigatório pela ANTT nesse caso).
+10. **Código da instituição financeira** é busca por nome/código (autocomplete)
+    contra a lista oficial de bancos do Banco Central, em vez de digitar o
+    código de cabeça.
+11. Um banner no topo da tela de emissão mostra o **ambiente atual**
+    (Homologação/Produção) com um botão para alternar rapidamente — útil para
+    testar sem precisar entrar em Configurações a cada vez.
 
 ## Integrações auxiliares
 

@@ -31,11 +31,21 @@ function validar(input: Partial<CiotEmissaoInput>): string | null {
   if (!input.veiculo?.placa) return "Placa do veículo é obrigatória.";
   if (!input.veiculo?.numeroEixos) return "Número de eixos do veículo é obrigatório.";
   if (input.operacao?.composicaoVeicular) {
-    if (!input.implemento?.placa) return "Placa do implemento é obrigatória quando há composição veicular.";
-    if (!input.implemento?.numeroEixos)
-      return "Número de eixos do implemento é obrigatório quando há composição veicular.";
+    if (!input.implementos || input.implementos.length === 0)
+      return "Informe ao menos um implemento quando há composição veicular.";
+    if (input.implementos.length > 4)
+      return "A ANTT aceita no máximo 5 placas por operação (veículo + até 4 implementos).";
+    for (const implemento of input.implementos) {
+      if (!implemento.placa) return "Placa do implemento é obrigatória.";
+      if (!implemento.numeroEixos) return "Número de eixos do implemento é obrigatório.";
+    }
   }
   if (!input.operacao?.tipoOperacao) return "Tipo de operação é obrigatório.";
+  if (
+    input.operacao?.tipoOperacao === 2 &&
+    (!input.operacao?.contratantesCargaFrac || input.operacao.contratantesCargaFrac.length === 0)
+  )
+    return "Informe ao menos um contratante da carga fracionada (obrigatório para Carga Fracionada).";
   if (!input.operacao?.codigoMunicipioOrigem || !input.operacao?.codigoMunicipioDestino)
     return "Código IBGE do município de origem e de destino são obrigatórios.";
   if (!input.operacao?.dataInicioViagem || !input.operacao?.dataFimViagem)
@@ -47,6 +57,8 @@ function validar(input: Partial<CiotEmissaoInput>): string | null {
   if (input.operacao?.indContingencia && !input.operacao?.justificativaContingencia)
     return "Justificativa de contingência é obrigatória quando a emissão é em contingência.";
   if (!input.pagamento?.tipoPagamento) return "Tipo de pagamento é obrigatório.";
+  if (input.pagamento?.tipoPagamento === 6 && !input.pagamento?.identificadorPix)
+    return "Identificador Pix é obrigatório quando o pagamento é via Pix.";
   return null;
 }
 

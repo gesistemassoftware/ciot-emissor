@@ -100,14 +100,12 @@ function montarPayloadDeclaracao(input: CiotEmissaoInput) {
         RNTRC: input.veiculo.rntrc,
         NumeroEixos: input.veiculo.numeroEixos,
       },
-      ...(input.operacao.composicaoVeicular && input.implemento
-        ? [
-            {
-              Placa: input.implemento.placa.toUpperCase(),
-              RNTRC: input.implemento.rntrc,
-              NumeroEixos: input.implemento.numeroEixos,
-            },
-          ]
+      ...(input.operacao.composicaoVeicular && input.implementos
+        ? input.implementos.map((implemento) => ({
+            Placa: implemento.placa.toUpperCase(),
+            RNTRC: implemento.rntrc,
+            NumeroEixos: implemento.numeroEixos,
+          }))
         : []),
     ],
     OrigemDestino: [
@@ -121,6 +119,10 @@ function montarPayloadDeclaracao(input: CiotEmissaoInput) {
       CodigoNaturezaCarga: input.operacao.codigoNaturezaCarga,
       PesoCarga: input.operacao.pesoCargaKg,
       CodigoTipoCarga: input.operacao.codigoTipoCarga,
+      ContratantesCargaFrac:
+        input.operacao.tipoOperacao === 2
+          ? input.operacao.contratantesCargaFrac?.map((cpfCnpj) => cpfCnpj.replace(/\D/g, ""))
+          : undefined,
     },
     InfPagamento: [
       {
@@ -130,6 +132,8 @@ function montarPayloadDeclaracao(input: CiotEmissaoInput) {
         NumeroConta: input.pagamento.numeroConta,
         ChavePix: input.pagamento.chavePix,
         CpfCnpjCreditado: input.pagamento.cpfCnpjCreditado,
+        CodigoPagamento: input.pagamento.codigoPagamento,
+        IdentificadorPix: input.pagamento.identificadorPix,
         IndPagamento: input.pagamento.indPagamento,
         NumeroParcela: input.pagamento.numeroParcela,
         DataVencimento: input.pagamento.dataVencimento,
