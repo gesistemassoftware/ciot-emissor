@@ -109,3 +109,7 @@ export async function encerrarCiotNoBanco(
     [dataEncerramento, contaId, emissaoId]
   );
 }
+
+export async function excluirCiotDoBanco(contaId: string, emissaoId: string): Promise<void> {
+  await query("DELETE FROM emissoes WHERE conta_id = $1 AND id = $2", [contaId, emissaoId]);
+}

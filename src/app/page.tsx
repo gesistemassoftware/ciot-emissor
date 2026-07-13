@@ -208,6 +208,14 @@ export default function Home() {
     router.refresh();
   }
 
+  function handleEditar(item: CiotEmissaoResult) {
+    setForm(item.input);
+    setErro(null);
+    setUltimoResultado(null);
+    setAbaOperacao("carga");
+    requestAnimationFrame(() => window.scrollTo(0, 0));
+  }
+
   async function handleBuscarTerceiro(papel: PapelTerceiro, cpfCnpj: string) {
     const encontrado = await buscarTerceiro(papel, cpfCnpj);
     if (!encontrado) return;
@@ -1087,7 +1095,12 @@ export default function Home() {
                 </thead>
                 <tbody>
                   {historico.map((item) => (
-                    <LinhaHistorico key={item.id} item={item} onAtualizado={carregarHistorico} />
+                    <LinhaHistorico
+                      key={item.id}
+                      item={item}
+                      onAtualizado={carregarHistorico}
+                      onEditar={handleEditar}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -1102,9 +1115,11 @@ export default function Home() {
 function LinhaHistorico({
   item,
   onAtualizado,
+  onEditar,
 }: {
   item: CiotEmissaoResult;
   onAtualizado: () => void;
+  onEditar: (item: CiotEmissaoResult) => void;
 }) {
   const [mostrarCancelar, setMostrarCancelar] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -1113,6 +1128,28 @@ function LinhaHistorico({
 
   const simulado = item.protocoloOperadora?.startsWith("MOCK-") ?? false;
   const podeGerenciar = item.status === "EMITIDO" && !!item.numeroCiot && !simulado;
+  const podeEditar = item.status === "ERRO" || item.status === "PENDENTE";
+
+  async function handleExcluir() {
+    if (!window.confirm("Excluir esta emissão do histórico? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+    setProcessando(true);
+    setMensagem(null);
+    try {
+      const res = await fetch(`/api/ciot/${item.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setMensagem(data?.mensagem ?? "Falha ao excluir.");
+        return;
+      }
+      onAtualizado();
+    } catch {
+      setMensagem("Falha de comunicação.");
+    } finally {
+      setProcessando(false);
+    }
+  }
 
   async function handleCancelar() {
     if (!motivo.trim()) {
@@ -1206,60 +1243,26 @@ function LinhaHistorico({
       </td>
       <td className="px-4 py-2.5 text-navy-800">{formatarMoeda(item.input.operacao.valorFrete)}</td>
       <td className="px-4 py-2.5">
-        {podeGerenciar ? (
-          <div className="flex flex-col gap-1">
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setMostrarCancelar((v) => !v)}
-                disabled={processando}
-                className="text-xs text-red-600 hover:underline disabled:opacity-50 cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleEncerrar}
-                disabled={processando}
-                className="text-xs text-navy-700 hover:underline disabled:opacity-50 cursor-pointer"
-              >
-                Encerrar
-              </button>
-              <button
-                type="button"
-                onClick={handleConsultar}
-                disabled={processando}
-                className="text-xs text-navy-500 hover:underline disabled:opacity-50 cursor-pointer"
-              >
-                Consultar
-              </button>
-            </div>
-            {mostrarCancelar && (
-              <div className="flex gap-1">
-                <input
-                  className="input text-xs py-1"
-                  placeholder="Motivo do cancelamento"
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                />
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-3">
+            {podeGerenciar && (
+              <>
                 <button
                   type="button"
-                  onClick={handleCancelar}
+                  onClick={() => setMostrarCancelar((v) => !v)}
                   disabled={processando}
-                  className="shrink-0 rounded-lg border border-red-300 px-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 cursor-pointer"
+                  className="text-xs text-red-600 hover:underline disabled:opacity-50 cursor-pointer"
                 >
-                  Confirmar
+                  Cancelar
                 </button>
-              </div>
-            )}
-            {mensagem && <p className="text-xs text-navy-400">{mensagem}</p>}
-          </div>
-        ) : (
-          <div>
-            {simulado ? (
-              <span className="text-xs text-navy-300">simulado</span>
-            ) : (
-              item.status !== "EMITIDO" && (
+                <button
+                  type="button"
+                  onClick={handleEncerrar}
+                  disabled={processando}
+                  className="text-xs text-navy-700 hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  Encerrar
+                </button>
                 <button
                   type="button"
                   onClick={handleConsultar}
@@ -1268,11 +1271,57 @@ function LinhaHistorico({
                 >
                   Consultar
                 </button>
-              )
+              </>
             )}
-            {mensagem && <p className="text-xs text-navy-400">{mensagem}</p>}
+            {!podeGerenciar && simulado && <span className="text-xs text-navy-300">simulado</span>}
+            {!podeGerenciar && !simulado && item.status !== "EMITIDO" && (
+              <button
+                type="button"
+                onClick={handleConsultar}
+                disabled={processando}
+                className="text-xs text-navy-500 hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Consultar
+              </button>
+            )}
+            {podeEditar && (
+              <button
+                type="button"
+                onClick={() => onEditar(item)}
+                className="text-xs font-medium text-navy-800 hover:underline cursor-pointer"
+              >
+                Editar
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleExcluir}
+              disabled={processando}
+              className="text-xs text-red-500 hover:underline disabled:opacity-50 cursor-pointer"
+            >
+              Excluir
+            </button>
           </div>
-        )}
+          {mostrarCancelar && (
+            <div className="flex gap-1">
+              <input
+                className="input text-xs py-1"
+                placeholder="Motivo do cancelamento"
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={handleCancelar}
+                disabled={processando}
+                className="shrink-0 rounded-lg border border-red-300 px-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 cursor-pointer"
+              >
+                Confirmar
+              </button>
+            </div>
+          )}
+          {mensagem && <p className="text-xs text-navy-400">{mensagem}</p>}
+        </div>
       </td>
     </tr>
   );
