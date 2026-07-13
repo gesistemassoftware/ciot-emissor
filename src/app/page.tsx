@@ -287,7 +287,8 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErro(data.mensagem ?? "Não foi possível emitir o CIOT.");
+        setErro(data.mensagemErro ?? data.mensagem ?? "Não foi possível emitir o CIOT.");
+        if (data.status === "ERRO") setUltimoResultado(data);
         return;
       }
 
