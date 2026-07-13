@@ -156,7 +156,7 @@ export default function Home() {
   async function handleCalcularDistancia() {
     const { codigoMunicipioOrigem, codigoMunicipioDestino } = form.operacao;
     if (!codigoMunicipioOrigem || !codigoMunicipioDestino) {
-      setErroDistancia("Informe o código IBGE de origem e destino primeiro.");
+      setErroDistancia("Informe origem e destino primeiro.");
       return;
     }
     setCalculandoDistancia(true);
@@ -243,223 +243,183 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl w-full px-6 py-10 flex-1">
-      <header className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Emissão de CIOT</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Integração direta com a ANTT (webservice PEF · CIOT Para Todos) — apenas
-            para ETC com frota própria vinculada ao RNTRC
-          </p>
-        </div>
-        <div className="shrink-0 flex items-center gap-4 whitespace-nowrap">
-          <Link href="/configuracoes" className="text-sm text-blue-600 hover:underline">
-            ⚙ Configurações
-          </Link>
-          <button onClick={handleLogout} className="text-sm text-neutral-500 hover:underline">
-            Sair
-          </button>
-        </div>
-      </header>
+    <div className="min-h-full flex-1 bg-navy-50">
+      <div className="mx-auto max-w-4xl w-full px-6 py-10">
+        <header className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-navy-900">Emissão de CIOT</h1>
+            <p className="text-sm text-navy-600 mt-1">
+              Integração direta com a ANTT (webservice PEF · CIOT Para Todos) — apenas
+              para ETC com frota própria vinculada ao RNTRC
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-4 whitespace-nowrap">
+            <Link href="/configuracoes" className="text-sm text-navy-700 hover:text-navy-900 hover:underline">
+              Configurações
+            </Link>
+            <button onClick={handleLogout} className="text-sm text-navy-500 hover:text-navy-700 hover:underline cursor-pointer">
+              Sair
+            </button>
+          </div>
+        </header>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Campo label="Tipo de operação">
-            <select
-              className="input"
-              value={form.operacao.tipoOperacao}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: {
-                    ...f.operacao,
-                    tipoOperacao: Number(e.target.value) as TipoOperacao,
-                  },
-                }))
-              }
-            >
-              <option value={1}>1 - Carga Lotação</option>
-              <option value={2}>2 - Carga Fracionada</option>
-              <option value={3}>3 - TAC-Agregado</option>
-            </select>
-          </Campo>
-          <Campo label="Data início da viagem" required>
-            <input
-              type="date"
-              className="input"
-              value={form.operacao.dataInicioViagem}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, dataInicioViagem: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="Data fim da viagem" required>
-            <input
-              type="date"
-              className="input"
-              value={form.operacao.dataFimViagem}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  operacao: { ...f.operacao, dataFimViagem: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-        </div>
-
-        <Secao titulo="Indicadores operacionais (obrigatórios para Carga Lotação)">
-          <Checkbox
-            label="Alto desempenho"
-            checked={form.operacao.indAltoDesempenho}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, indAltoDesempenho: v } }))
-            }
-          />
-          <Checkbox
-            label="Retorno vazio"
-            checked={form.operacao.indRetornoVazio}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, indRetornoVazio: v } }))
-            }
-          />
-          <Checkbox
-            label="Composição veicular"
-            checked={form.operacao.composicaoVeicular}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, composicaoVeicular: v } }))
-            }
-          />
-        </Secao>
-
-        <Secao titulo="Contingência">
-          <Checkbox
-            label="Emitir em contingência"
-            checked={form.operacao.indContingencia}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, operacao: { ...f.operacao, indContingencia: v } }))
-            }
-          />
-          {form.operacao.indContingencia && (
-            <Campo label="Justificativa da contingência" required>
-              <input
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="card p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Campo label="Tipo de operação">
+              <select
                 className="input"
-                value={form.operacao.justificativaContingencia}
+                value={form.operacao.tipoOperacao}
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
-                    operacao: { ...f.operacao, justificativaContingencia: e.target.value },
+                    operacao: {
+                      ...f.operacao,
+                      tipoOperacao: Number(e.target.value) as TipoOperacao,
+                    },
+                  }))
+                }
+              >
+                <option value={1}>1 - Carga Lotação</option>
+                <option value={2}>2 - Carga Fracionada</option>
+                <option value={3}>3 - TAC-Agregado</option>
+              </select>
+            </Campo>
+            <Campo label="Data início da viagem" required>
+              <input
+                type="date"
+                className="input"
+                value={form.operacao.dataInicioViagem}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    operacao: { ...f.operacao, dataInicioViagem: e.target.value },
                   }))
                 }
               />
             </Campo>
-          )}
-        </Secao>
-
-        <Secao titulo="Contratante">
-          <Campo label="CNPJ/CPF do contratante" required>
-            <input
-              className="input"
-              value={form.contratante.cnpj}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, contratante: { ...f.contratante, cnpj: e.target.value } }))
-              }
-              placeholder="00.000.000/0000-00"
-            />
-          </Campo>
-          <Campo label="Razão social (referência local)">
-            <input
-              className="input"
-              value={form.contratante.razaoSocial}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  contratante: { ...f.contratante, razaoSocial: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-        </Secao>
-
-        <TerceiroSecao
-          titulo="Contratado / Proprietário do Veículo"
-          descricao="Motorista ou dono do veículo que vai efetivamente rodar esta operação — pode variar a cada emissão (ex: TAC subcontratado)."
-          papel="contratado"
-          valor={form.contratado}
-          onChange={(v) => setForm((f) => ({ ...f, contratado: v }))}
-          onBuscar={(cpfCnpj) => handleBuscarTerceiro("contratado", cpfCnpj)}
-          mostrarRntrc
-        />
-
-        <TerceiroSecao
-          titulo="Destinatário"
-          descricao="Quem recebe a carga."
-          papel="destinatario"
-          valor={form.destinatario}
-          onChange={(v) => setForm((f) => ({ ...f, destinatario: v }))}
-          onBuscar={(cpfCnpj) => handleBuscarTerceiro("destinatario", cpfCnpj)}
-        />
-
-        <TerceiroSecao
-          titulo="Tomador do Serviço"
-          descricao="Quem solicitou/paga pelo serviço de transporte (pode ser o próprio contratante)."
-          papel="tomador"
-          valor={form.tomador}
-          onChange={(v) => setForm((f) => ({ ...f, tomador: v }))}
-          onBuscar={(cpfCnpj) => handleBuscarTerceiro("tomador", cpfCnpj)}
-        />
-
-        <Secao titulo="Veículo">
-          <Campo label="Placa" required>
-            <input
-              className="input uppercase"
-              value={form.veiculo.placa}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, veiculo: { ...f.veiculo, placa: e.target.value } }))
-              }
-              placeholder="ABC1D23"
-            />
-          </Campo>
-          <Campo label="Número de eixos" required>
-            <input
-              type="number"
-              min={1}
-              max={9}
-              className="input"
-              value={form.veiculo.numeroEixos}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  veiculo: { ...f.veiculo, numeroEixos: Number(e.target.value) },
-                }))
-              }
-            />
-          </Campo>
-          <Campo label="RNTRC do veículo (se diferente do contratado)">
-            <input
-              className="input"
-              value={form.veiculo.rntrc}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, veiculo: { ...f.veiculo, rntrc: e.target.value } }))
-              }
-            />
-          </Campo>
-        </Secao>
-
-        {form.operacao.composicaoVeicular && (
-          <Secao titulo="Implemento (reboque/semirreboque)">
-            <Campo label="Placa" required>
+            <Campo label="Data fim da viagem" required>
               <input
-                className="input uppercase"
-                value={form.implemento?.placa ?? ""}
+                type="date"
+                className="input"
+                value={form.operacao.dataFimViagem}
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
-                    implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), placa: e.target.value },
+                    operacao: { ...f.operacao, dataFimViagem: e.target.value },
                   }))
+                }
+              />
+            </Campo>
+          </div>
+
+          <Secao titulo="Indicadores operacionais (obrigatórios para Carga Lotação)">
+            <Checkbox
+              label="Alto desempenho"
+              checked={form.operacao.indAltoDesempenho}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, operacao: { ...f.operacao, indAltoDesempenho: v } }))
+              }
+            />
+            <Checkbox
+              label="Retorno vazio"
+              checked={form.operacao.indRetornoVazio}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, operacao: { ...f.operacao, indRetornoVazio: v } }))
+              }
+            />
+            <Checkbox
+              label="Composição veicular"
+              checked={form.operacao.composicaoVeicular}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, operacao: { ...f.operacao, composicaoVeicular: v } }))
+              }
+            />
+          </Secao>
+
+          <Secao titulo="Contingência">
+            <Checkbox
+              label="Emitir em contingência"
+              checked={form.operacao.indContingencia}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, operacao: { ...f.operacao, indContingencia: v } }))
+              }
+            />
+            {form.operacao.indContingencia && (
+              <Campo label="Justificativa da contingência" required>
+                <input
+                  className="input"
+                  value={form.operacao.justificativaContingencia}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      operacao: { ...f.operacao, justificativaContingencia: e.target.value },
+                    }))
+                  }
+                />
+              </Campo>
+            )}
+          </Secao>
+
+          <Secao titulo="Contratante">
+            <Campo label="CNPJ/CPF do contratante" required>
+              <input
+                className="input"
+                value={form.contratante.cnpj}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, contratante: { ...f.contratante, cnpj: e.target.value } }))
+                }
+                placeholder="00.000.000/0000-00"
+              />
+            </Campo>
+            <Campo label="Razão social (referência local)">
+              <input
+                className="input"
+                value={form.contratante.razaoSocial}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    contratante: { ...f.contratante, razaoSocial: e.target.value },
+                  }))
+                }
+              />
+            </Campo>
+          </Secao>
+
+          <TerceiroSecao
+            titulo="Contratado / Proprietário do Veículo"
+            descricao="Motorista ou dono do veículo que vai efetivamente rodar esta operação — pode variar a cada emissão (ex: TAC subcontratado)."
+            papel="contratado"
+            valor={form.contratado}
+            onChange={(v) => setForm((f) => ({ ...f, contratado: v }))}
+            onBuscar={(cpfCnpj) => handleBuscarTerceiro("contratado", cpfCnpj)}
+            mostrarRntrc
+          />
+
+          <TerceiroSecao
+            titulo="Destinatário"
+            descricao="Quem recebe a carga."
+            papel="destinatario"
+            valor={form.destinatario}
+            onChange={(v) => setForm((f) => ({ ...f, destinatario: v }))}
+            onBuscar={(cpfCnpj) => handleBuscarTerceiro("destinatario", cpfCnpj)}
+          />
+
+          <TerceiroSecao
+            titulo="Tomador do Serviço"
+            descricao="Quem solicitou/paga pelo serviço de transporte (pode ser o próprio contratante)."
+            papel="tomador"
+            valor={form.tomador}
+            onChange={(v) => setForm((f) => ({ ...f, tomador: v }))}
+            onBuscar={(cpfCnpj) => handleBuscarTerceiro("tomador", cpfCnpj)}
+          />
+
+          <Secao titulo="Veículo">
+            <Campo label="Placa" required>
+              <input
+                className="input uppercase"
+                value={form.veiculo.placa}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, veiculo: { ...f.veiculo, placa: e.target.value } }))
                 }
                 placeholder="ABC1D23"
               />
@@ -470,434 +430,472 @@ export default function Home() {
                 min={1}
                 max={9}
                 className="input"
-                value={form.implemento?.numeroEixos ?? 2}
+                value={form.veiculo.numeroEixos}
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
-                    implemento: {
-                      ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }),
-                      numeroEixos: Number(e.target.value),
-                    },
+                    veiculo: { ...f.veiculo, numeroEixos: Number(e.target.value) },
                   }))
                 }
               />
             </Campo>
-            <Campo label="RNTRC do implemento (se diferente do contratado)">
+            <Campo label="RNTRC do veículo (se diferente do contratado)">
               <input
                 className="input"
-                value={form.implemento?.rntrc ?? ""}
+                value={form.veiculo.rntrc}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), rntrc: e.target.value },
-                  }))
+                  setForm((f) => ({ ...f, veiculo: { ...f.veiculo, rntrc: e.target.value } }))
                 }
               />
             </Campo>
           </Secao>
-        )}
 
-        <fieldset className="border border-neutral-200 rounded-xl p-5">
-          <legend className="px-2 text-sm font-semibold text-neutral-700">
-            Operação de transporte
-          </legend>
+          {form.operacao.composicaoVeicular && (
+            <Secao titulo="Implemento (reboque/semirreboque)">
+              <Campo label="Placa" required>
+                <input
+                  className="input uppercase"
+                  value={form.implemento?.placa ?? ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), placa: e.target.value },
+                    }))
+                  }
+                  placeholder="ABC1D23"
+                />
+              </Campo>
+              <Campo label="Número de eixos" required>
+                <input
+                  type="number"
+                  min={1}
+                  max={9}
+                  className="input"
+                  value={form.implemento?.numeroEixos ?? 2}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      implemento: {
+                        ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }),
+                        numeroEixos: Number(e.target.value),
+                      },
+                    }))
+                  }
+                />
+              </Campo>
+              <Campo label="RNTRC do implemento (se diferente do contratado)">
+                <input
+                  className="input"
+                  value={form.implemento?.rntrc ?? ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      implemento: { ...(f.implemento ?? { placa: "", numeroEixos: 2, rntrc: "" }), rntrc: e.target.value },
+                    }))
+                  }
+                />
+              </Campo>
+            </Secao>
+          )}
 
-          <div className="flex gap-2 mb-4 border-b border-neutral-200">
-            <button
-              type="button"
-              onClick={() => setAbaOperacao("carga")}
-              className={
-                "px-4 py-2 text-sm font-medium border-b-2 -mb-px cursor-pointer " +
-                (abaOperacao === "carga"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-neutral-500 hover:text-neutral-700")
-              }
-            >
-              Carga
-            </button>
-            <button
-              type="button"
-              onClick={() => setAbaOperacao("viagens")}
-              className={
-                "px-4 py-2 text-sm font-medium border-b-2 -mb-px cursor-pointer " +
-                (abaOperacao === "viagens"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-neutral-500 hover:text-neutral-700")
-              }
-            >
-              Viagens
-            </button>
-          </div>
+          <fieldset className="card p-5">
+            <legend className="px-2 text-sm font-semibold text-navy-800">
+              Operação de transporte
+            </legend>
 
-          {abaOperacao === "carga" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Campo label="Valor do frete (R$)" required>
-                <div className="flex gap-2">
+            <div className="flex gap-2 mb-4 border-b border-navy-100">
+              <button
+                type="button"
+                onClick={() => setAbaOperacao("carga")}
+                className={
+                  "px-4 py-2 text-sm font-medium border-b-2 -mb-px cursor-pointer transition-colors " +
+                  (abaOperacao === "carga"
+                    ? "border-navy-700 text-navy-800"
+                    : "border-transparent text-navy-400 hover:text-navy-600")
+                }
+              >
+                Carga
+              </button>
+              <button
+                type="button"
+                onClick={() => setAbaOperacao("viagens")}
+                className={
+                  "px-4 py-2 text-sm font-medium border-b-2 -mb-px cursor-pointer transition-colors " +
+                  (abaOperacao === "viagens"
+                    ? "border-navy-700 text-navy-800"
+                    : "border-transparent text-navy-400 hover:text-navy-600")
+                }
+              >
+                Viagens
+              </button>
+            </div>
+
+            {abaOperacao === "carga" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Campo label="Valor do frete (R$)" required>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="input"
+                      value={form.operacao.valorFrete}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          operacao: { ...f.operacao, valorFrete: Number(e.target.value) },
+                        }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCalcularPiso}
+                      disabled={calculandoPiso}
+                      className="btn-ghost whitespace-nowrap"
+                      title="Consultar piso mínimo de frete na calculadora oficial da ANTT"
+                    >
+                      {calculandoPiso ? "Calculando..." : "Piso mínimo ANTT"}
+                    </button>
+                  </div>
+                  {erroPiso && <p className="text-xs text-red-600 mt-1">{erroPiso}</p>}
+                  {pisoMinimo && (
+                    <div className="text-xs text-navy-700 mt-1 bg-navy-50 border border-navy-100 rounded-lg p-2">
+                      Piso mínimo ANTT:{" "}
+                      <strong>
+                        {pisoMinimo.valorPiso.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
+                      </strong>
+                      {pisoMinimo.tabela && <> · {pisoMinimo.tabela}</>}
+                      <button
+                        type="button"
+                        className="ml-2 text-navy-700 font-medium hover:underline cursor-pointer"
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            operacao: { ...f.operacao, valorFrete: pisoMinimo.valorPiso },
+                          }))
+                        }
+                      >
+                        usar este valor
+                      </button>
+                    </div>
+                  )}
+                </Campo>
+                <Campo label="Peso da carga (kg)">
+                  <input
+                    type="number"
+                    min={0}
+                    className="input"
+                    value={form.operacao.pesoCargaKg}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        operacao: { ...f.operacao, pesoCargaKg: Number(e.target.value) },
+                      }))
+                    }
+                  />
+                </Campo>
+                <NaturezaCargaAutocomplete
+                  codigoAtual={form.operacao.codigoNaturezaCarga}
+                  onSelect={(n) =>
+                    setForm((f) => ({
+                      ...f,
+                      operacao: { ...f.operacao, codigoNaturezaCarga: n.codigo },
+                    }))
+                  }
+                />
+                <Campo label="Código do tipo de carga" required>
+                  <select
+                    className="input"
+                    value={form.operacao.codigoTipoCarga}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        operacao: {
+                          ...f.operacao,
+                          codigoTipoCarga: e.target.value as CodigoTipoCarga,
+                        },
+                      }))
+                    }
+                  >
+                    {TIPOS_CARGA.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+              </div>
+            )}
+
+            {abaOperacao === "viagens" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <MunicipioAutocomplete
+                  label="Origem"
+                  nomeAtual={form.operacao.nomeMunicipioOrigem}
+                  onSelect={(m) =>
+                    setForm((f) => ({
+                      ...f,
+                      operacao: {
+                        ...f.operacao,
+                        codigoMunicipioOrigem: m.codigo,
+                        nomeMunicipioOrigem: `${m.nome}/${m.uf}`,
+                      },
+                    }))
+                  }
+                />
+                <MunicipioAutocomplete
+                  label="Destino"
+                  nomeAtual={form.operacao.nomeMunicipioDestino}
+                  onSelect={(m) =>
+                    setForm((f) => ({
+                      ...f,
+                      operacao: {
+                        ...f.operacao,
+                        codigoMunicipioDestino: m.codigo,
+                        nomeMunicipioDestino: `${m.nome}/${m.uf}`,
+                      },
+                    }))
+                  }
+                />
+                <Campo label="Distância percorrida (km)">
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      className="input"
+                      value={form.operacao.distanciaPercorridaKm}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          operacao: { ...f.operacao, distanciaPercorridaKm: Number(e.target.value) },
+                        }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCalcularDistancia}
+                      disabled={calculandoDistancia}
+                      className="btn-ghost whitespace-nowrap"
+                      title="Calcular distância entre origem e destino (roteirizador)"
+                    >
+                      {calculandoDistancia ? "Calculando..." : "Calcular"}
+                    </button>
+                  </div>
+                  {erroDistancia && <p className="text-xs text-red-600 mt-1">{erroDistancia}</p>}
+                </Campo>
+              </div>
+            )}
+          </fieldset>
+
+          <Secao titulo="Pagamento">
+            <Campo label="Tipo de pagamento">
+              <select
+                className="input"
+                value={form.pagamento.tipoPagamento}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    pagamento: {
+                      ...f.pagamento,
+                      tipoPagamento: Number(e.target.value) as TipoPagamento,
+                    },
+                  }))
+                }
+              >
+                {TIPOS_PAGAMENTO.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            <Campo label="CPF/CNPJ do creditado">
+              <input
+                className="input"
+                value={form.pagamento.cpfCnpjCreditado}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    pagamento: { ...f.pagamento, cpfCnpjCreditado: e.target.value },
+                  }))
+                }
+              />
+            </Campo>
+
+            {form.pagamento.tipoPagamento === 6 && (
+              <Campo label="Chave Pix">
+                <input
+                  className="input"
+                  value={form.pagamento.chavePix}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      pagamento: { ...f.pagamento, chavePix: e.target.value },
+                    }))
+                  }
+                />
+              </Campo>
+            )}
+
+            {[2, 3, 4].includes(form.pagamento.tipoPagamento) && (
+              <>
+                <Campo label="Código da instituição financeira">
+                  <input
+                    className="input"
+                    value={form.pagamento.codigoInstituicaoFinanceira}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        pagamento: { ...f.pagamento, codigoInstituicaoFinanceira: e.target.value },
+                      }))
+                    }
+                  />
+                </Campo>
+                <Campo label="Agência">
+                  <input
+                    className="input"
+                    value={form.pagamento.numeroAgencia}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        pagamento: { ...f.pagamento, numeroAgencia: e.target.value },
+                      }))
+                    }
+                  />
+                </Campo>
+                <Campo label="Conta">
+                  <input
+                    className="input"
+                    value={form.pagamento.numeroConta}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        pagamento: { ...f.pagamento, numeroConta: e.target.value },
+                      }))
+                    }
+                  />
+                </Campo>
+              </>
+            )}
+
+            <Campo label="Condição de pagamento">
+              <select
+                className="input"
+                value={form.pagamento.indPagamento}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    pagamento: {
+                      ...f.pagamento,
+                      indPagamento: Number(e.target.value) as 0 | 1,
+                    },
+                  }))
+                }
+              >
+                <option value={0}>À vista</option>
+                <option value={1}>A prazo</option>
+              </select>
+            </Campo>
+
+            {form.pagamento.indPagamento === 1 && (
+              <>
+                <Campo label="Data de vencimento">
+                  <input
+                    type="date"
+                    className="input"
+                    value={form.pagamento.dataVencimento}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        pagamento: { ...f.pagamento, dataVencimento: e.target.value },
+                      }))
+                    }
+                  />
+                </Campo>
+                <Campo label="Valor da parcela (R$)">
                   <input
                     type="number"
                     min={0}
                     step="0.01"
                     className="input"
-                    value={form.operacao.valorFrete}
+                    value={form.pagamento.valorParcela}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
-                        operacao: { ...f.operacao, valorFrete: Number(e.target.value) },
+                        pagamento: {
+                          ...f.pagamento,
+                          numeroParcela: 1,
+                          valorParcela: Number(e.target.value),
+                        },
                       }))
                     }
                   />
-                  <button
-                    type="button"
-                    onClick={handleCalcularPiso}
-                    disabled={calculandoPiso}
-                    className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
-                    title="Consultar piso mínimo de frete na calculadora oficial da ANTT"
-                  >
-                    {calculandoPiso ? "Calculando..." : "Piso mínimo ANTT"}
-                  </button>
+                </Campo>
+              </>
+            )}
+          </Secao>
+
+          {erro && (
+            <div className="rounded-lg border border-red-300 bg-red-50 text-red-700 px-4 py-3 text-sm">
+              {erro}
+            </div>
+          )}
+
+          {ultimoResultado && ultimoResultado.status === "EMITIDO" && (
+            <div className="rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm">
+              CIOT emitido com sucesso: <strong>{ultimoResultado.numeroCiot}</strong>
+              {ultimoResultado.codigoVerificador && (
+                <> · Código verificador: <strong>{ultimoResultado.codigoVerificador}</strong></>
+              )}
+              {ultimoResultado.avisoTransportador && (
+                <div className="text-xs text-amber-700 mt-1">
+                  Aviso ANTT: {ultimoResultado.avisoTransportador}
                 </div>
-                {erroPiso && <p className="text-xs text-red-600 mt-1">{erroPiso}</p>}
-                {pisoMinimo && (
-                  <div className="text-xs text-neutral-600 mt-1 bg-neutral-50 border border-neutral-200 rounded-lg p-2">
-                    Piso mínimo ANTT:{" "}
-                    <strong>
-                      {pisoMinimo.valorPiso.toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })}
-                    </strong>
-                    {pisoMinimo.tabela && <> · {pisoMinimo.tabela}</>}
-                    <button
-                      type="button"
-                      className="ml-2 text-blue-600 hover:underline cursor-pointer"
-                      onClick={() =>
-                        setForm((f) => ({
-                          ...f,
-                          operacao: { ...f.operacao, valorFrete: pisoMinimo.valorPiso },
-                        }))
-                      }
-                    >
-                      usar este valor
-                    </button>
-                  </div>
-                )}
-              </Campo>
-              <Campo label="Peso da carga (kg)">
-                <input
-                  type="number"
-                  min={0}
-                  className="input"
-                  value={form.operacao.pesoCargaKg}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      operacao: { ...f.operacao, pesoCargaKg: Number(e.target.value) },
-                    }))
-                  }
-                />
-              </Campo>
-              <NaturezaCargaAutocomplete
-                codigoAtual={form.operacao.codigoNaturezaCarga}
-                onSelect={(n) =>
-                  setForm((f) => ({
-                    ...f,
-                    operacao: { ...f.operacao, codigoNaturezaCarga: n.codigo },
-                  }))
-                }
-              />
-              <Campo label="Código do tipo de carga" required>
-                <select
-                  className="input"
-                  value={form.operacao.codigoTipoCarga}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      operacao: {
-                        ...f.operacao,
-                        codigoTipoCarga: e.target.value as CodigoTipoCarga,
-                      },
-                    }))
-                  }
-                >
-                  {TIPOS_CARGA.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
+              )}
+              {ultimoResultado.mensagemErro && (
+                <div className="text-xs text-emerald-700 mt-1">{ultimoResultado.mensagemErro}</div>
+              )}
+            </div>
+          )}
+
+          <button type="submit" disabled={enviando} className="btn-primary">
+            {enviando ? "Emitindo..." : "Emitir CIOT"}
+          </button>
+        </form>
+
+        <section className="mt-12">
+          <h2 className="text-lg font-semibold text-navy-900 mb-3">Histórico de emissões</h2>
+          {carregandoHistorico ? (
+            <p className="text-sm text-navy-500">Carregando...</p>
+          ) : historico.length === 0 ? (
+            <p className="text-sm text-navy-500">Nenhum CIOT emitido ainda.</p>
+          ) : (
+            <div className="overflow-x-auto card">
+              <table className="w-full text-sm">
+                <thead className="bg-navy-900 text-left text-white">
+                  <tr>
+                    <th className="px-4 py-2.5 font-medium">Data</th>
+                    <th className="px-4 py-2.5 font-medium">CIOT</th>
+                    <th className="px-4 py-2.5 font-medium">Verificador</th>
+                    <th className="px-4 py-2.5 font-medium">Status</th>
+                    <th className="px-4 py-2.5 font-medium">Origem → Destino</th>
+                    <th className="px-4 py-2.5 font-medium">Frete</th>
+                    <th className="px-4 py-2.5 font-medium">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historico.map((item) => (
+                    <LinhaHistorico key={item.id} item={item} onAtualizado={carregarHistorico} />
                   ))}
-                </select>
-              </Campo>
+                </tbody>
+              </table>
             </div>
           )}
-
-          {abaOperacao === "viagens" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <MunicipioAutocomplete
-                label="Origem"
-                nomeAtual={form.operacao.nomeMunicipioOrigem}
-                onSelect={(m) =>
-                  setForm((f) => ({
-                    ...f,
-                    operacao: {
-                      ...f.operacao,
-                      codigoMunicipioOrigem: m.codigo,
-                      nomeMunicipioOrigem: `${m.nome}/${m.uf}`,
-                    },
-                  }))
-                }
-              />
-              <MunicipioAutocomplete
-                label="Destino"
-                nomeAtual={form.operacao.nomeMunicipioDestino}
-                onSelect={(m) =>
-                  setForm((f) => ({
-                    ...f,
-                    operacao: {
-                      ...f.operacao,
-                      codigoMunicipioDestino: m.codigo,
-                      nomeMunicipioDestino: `${m.nome}/${m.uf}`,
-                    },
-                  }))
-                }
-              />
-              <Campo label="Distância percorrida (km)">
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    className="input"
-                    value={form.operacao.distanciaPercorridaKm}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        operacao: { ...f.operacao, distanciaPercorridaKm: Number(e.target.value) },
-                      }))
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCalcularDistancia}
-                    disabled={calculandoDistancia}
-                    className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
-                    title="Calcular distância entre origem e destino (roteirizador)"
-                  >
-                    {calculandoDistancia ? "Calculando..." : "Calcular"}
-                  </button>
-                </div>
-                {erroDistancia && <p className="text-xs text-red-600 mt-1">{erroDistancia}</p>}
-              </Campo>
-            </div>
-          )}
-        </fieldset>
-
-        <Secao titulo="Pagamento">
-          <Campo label="Tipo de pagamento">
-            <select
-              className="input"
-              value={form.pagamento.tipoPagamento}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  pagamento: {
-                    ...f.pagamento,
-                    tipoPagamento: Number(e.target.value) as TipoPagamento,
-                  },
-                }))
-              }
-            >
-              {TIPOS_PAGAMENTO.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <Campo label="CPF/CNPJ do creditado">
-            <input
-              className="input"
-              value={form.pagamento.cpfCnpjCreditado}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  pagamento: { ...f.pagamento, cpfCnpjCreditado: e.target.value },
-                }))
-              }
-            />
-          </Campo>
-
-          {form.pagamento.tipoPagamento === 6 && (
-            <Campo label="Chave Pix">
-              <input
-                className="input"
-                value={form.pagamento.chavePix}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    pagamento: { ...f.pagamento, chavePix: e.target.value },
-                  }))
-                }
-              />
-            </Campo>
-          )}
-
-          {[2, 3, 4].includes(form.pagamento.tipoPagamento) && (
-            <>
-              <Campo label="Código da instituição financeira">
-                <input
-                  className="input"
-                  value={form.pagamento.codigoInstituicaoFinanceira}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      pagamento: { ...f.pagamento, codigoInstituicaoFinanceira: e.target.value },
-                    }))
-                  }
-                />
-              </Campo>
-              <Campo label="Agência">
-                <input
-                  className="input"
-                  value={form.pagamento.numeroAgencia}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      pagamento: { ...f.pagamento, numeroAgencia: e.target.value },
-                    }))
-                  }
-                />
-              </Campo>
-              <Campo label="Conta">
-                <input
-                  className="input"
-                  value={form.pagamento.numeroConta}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      pagamento: { ...f.pagamento, numeroConta: e.target.value },
-                    }))
-                  }
-                />
-              </Campo>
-            </>
-          )}
-
-          <Campo label="Condição de pagamento">
-            <select
-              className="input"
-              value={form.pagamento.indPagamento}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  pagamento: {
-                    ...f.pagamento,
-                    indPagamento: Number(e.target.value) as 0 | 1,
-                  },
-                }))
-              }
-            >
-              <option value={0}>À vista</option>
-              <option value={1}>A prazo</option>
-            </select>
-          </Campo>
-
-          {form.pagamento.indPagamento === 1 && (
-            <>
-              <Campo label="Data de vencimento">
-                <input
-                  type="date"
-                  className="input"
-                  value={form.pagamento.dataVencimento}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      pagamento: { ...f.pagamento, dataVencimento: e.target.value },
-                    }))
-                  }
-                />
-              </Campo>
-              <Campo label="Valor da parcela (R$)">
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  className="input"
-                  value={form.pagamento.valorParcela}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      pagamento: {
-                        ...f.pagamento,
-                        numeroParcela: 1,
-                        valorParcela: Number(e.target.value),
-                      },
-                    }))
-                  }
-                />
-              </Campo>
-            </>
-          )}
-        </Secao>
-
-        {erro && (
-          <div className="rounded-lg border border-red-300 bg-red-50 text-red-700 px-4 py-3 text-sm">
-            {erro}
-          </div>
-        )}
-
-        {ultimoResultado && ultimoResultado.status === "EMITIDO" && (
-          <div className="rounded-lg border border-green-300 bg-green-50 text-green-800 px-4 py-3 text-sm">
-            CIOT emitido com sucesso: <strong>{ultimoResultado.numeroCiot}</strong>
-            {ultimoResultado.codigoVerificador && (
-              <> · Código verificador: <strong>{ultimoResultado.codigoVerificador}</strong></>
-            )}
-            {ultimoResultado.avisoTransportador && (
-              <div className="text-xs text-amber-700 mt-1">
-                Aviso ANTT: {ultimoResultado.avisoTransportador}
-              </div>
-            )}
-            {ultimoResultado.mensagemErro && (
-              <div className="text-xs text-green-700 mt-1">{ultimoResultado.mensagemErro}</div>
-            )}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={enviando}
-          className="rounded-lg bg-blue-600 text-white px-6 py-2.5 font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {enviando ? "Emitindo..." : "Emitir CIOT"}
-        </button>
-      </form>
-
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold mb-3">Histórico de emissões</h2>
-        {carregandoHistorico ? (
-          <p className="text-sm text-neutral-500">Carregando...</p>
-        ) : historico.length === 0 ? (
-          <p className="text-sm text-neutral-500">Nenhum CIOT emitido ainda.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-neutral-200">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-100 text-left">
-                <tr>
-                  <th className="px-4 py-2">Data</th>
-                  <th className="px-4 py-2">CIOT</th>
-                  <th className="px-4 py-2">Verificador</th>
-                  <th className="px-4 py-2">Status</th>
-                  <th className="px-4 py-2">Origem → Destino</th>
-                  <th className="px-4 py-2">Frete</th>
-                  <th className="px-4 py-2">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historico.map((item) => (
-                  <LinhaHistorico key={item.id} item={item} onAtualizado={carregarHistorico} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
@@ -983,34 +981,35 @@ function LinhaHistorico({
   }
 
   return (
-    <tr className="border-t border-neutral-200 align-top">
-      <td className="px-4 py-2">{new Date(item.dataEmissao).toLocaleString("pt-BR")}</td>
-      <td className="px-4 py-2 font-mono text-xs">{item.numeroCiot ?? "—"}</td>
-      <td className="px-4 py-2 font-mono text-xs">{item.codigoVerificador ?? "—"}</td>
-      <td className="px-4 py-2">
+    <tr className="border-t border-navy-100 align-top">
+      <td className="px-4 py-2.5 text-navy-800">{new Date(item.dataEmissao).toLocaleString("pt-BR")}</td>
+      <td className="px-4 py-2.5 font-mono text-xs text-navy-800">{item.numeroCiot ?? "—"}</td>
+      <td className="px-4 py-2.5 font-mono text-xs text-navy-800">{item.codigoVerificador ?? "—"}</td>
+      <td className="px-4 py-2.5">
         <span
           className={
-            item.status === "EMITIDO"
-              ? "text-green-700"
+            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium " +
+            (item.status === "EMITIDO"
+              ? "bg-emerald-100 text-emerald-700"
               : item.status === "ERRO"
-              ? "text-red-700"
+              ? "bg-red-100 text-red-700"
               : item.status === "CANCELADO"
-              ? "text-neutral-500"
-              : "text-amber-700"
+              ? "bg-navy-100 text-navy-500"
+              : "bg-amber-100 text-amber-700")
           }
         >
           {item.status}
         </span>
       </td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5 text-navy-800">
         {item.input.operacao.nomeMunicipioOrigem || item.input.operacao.codigoMunicipioOrigem}{" "}
         → {item.input.operacao.nomeMunicipioDestino || item.input.operacao.codigoMunicipioDestino}
       </td>
-      <td className="px-4 py-2">{formatarMoeda(item.input.operacao.valorFrete)}</td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-2.5 text-navy-800">{formatarMoeda(item.input.operacao.valorFrete)}</td>
+      <td className="px-4 py-2.5">
         {podeGerenciar ? (
           <div className="flex flex-col gap-1">
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setMostrarCancelar((v) => !v)}
@@ -1023,7 +1022,7 @@ function LinhaHistorico({
                 type="button"
                 onClick={handleEncerrar}
                 disabled={processando}
-                className="text-xs text-blue-600 hover:underline disabled:opacity-50 cursor-pointer"
+                className="text-xs text-navy-700 hover:underline disabled:opacity-50 cursor-pointer"
               >
                 Encerrar
               </button>
@@ -1031,7 +1030,7 @@ function LinhaHistorico({
                 type="button"
                 onClick={handleConsultar}
                 disabled={processando}
-                className="text-xs text-neutral-600 hover:underline disabled:opacity-50 cursor-pointer"
+                className="text-xs text-navy-500 hover:underline disabled:opacity-50 cursor-pointer"
               >
                 Consultar
               </button>
@@ -1054,25 +1053,25 @@ function LinhaHistorico({
                 </button>
               </div>
             )}
-            {mensagem && <p className="text-xs text-neutral-500">{mensagem}</p>}
+            {mensagem && <p className="text-xs text-navy-400">{mensagem}</p>}
           </div>
         ) : (
           <div>
             {simulado ? (
-              <span className="text-xs text-neutral-400">simulado</span>
+              <span className="text-xs text-navy-300">simulado</span>
             ) : (
               item.status !== "EMITIDO" && (
                 <button
                   type="button"
                   onClick={handleConsultar}
                   disabled={processando}
-                  className="text-xs text-neutral-600 hover:underline disabled:opacity-50 cursor-pointer"
+                  className="text-xs text-navy-500 hover:underline disabled:opacity-50 cursor-pointer"
                 >
                   Consultar
                 </button>
               )
             )}
-            {mensagem && <p className="text-xs text-neutral-500">{mensagem}</p>}
+            {mensagem && <p className="text-xs text-navy-400">{mensagem}</p>}
           </div>
         )}
       </td>
@@ -1082,10 +1081,28 @@ function LinhaHistorico({
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <fieldset className="border border-neutral-200 rounded-xl p-5">
-      <legend className="px-2 text-sm font-semibold text-neutral-700">{titulo}</legend>
+    <fieldset className="card p-5">
+      <legend className="px-2 text-sm font-semibold text-navy-800">{titulo}</legend>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">{children}</div>
     </fieldset>
+  );
+}
+
+function IconeLupa({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className ?? "w-4 h-4"}
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.35-4.35" />
+    </svg>
   );
 }
 
@@ -1178,9 +1195,9 @@ function TerceiroSecao({
   }
 
   return (
-    <fieldset className="border border-neutral-200 rounded-xl p-5">
-      <legend className="px-2 text-sm font-semibold text-neutral-700">{titulo}</legend>
-      {descricao && <p className="text-xs text-neutral-500 mb-3">{descricao}</p>}
+    <fieldset className="card p-5">
+      <legend className="px-2 text-sm font-semibold text-navy-800">{titulo}</legend>
+      {descricao && <p className="text-xs text-navy-500 mb-3">{descricao}</p>}
       {erroBusca && <p className="text-xs text-red-600 mb-3">{erroBusca}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Campo label="CPF/CNPJ" required>
@@ -1196,10 +1213,11 @@ function TerceiroSecao({
               type="button"
               onClick={handleBuscarCnpj}
               disabled={buscandoCnpj}
-              className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+              className="btn-icon"
+              aria-label="Buscar dados do CNPJ na Receita Federal"
               title="Buscar dados do CNPJ na Receita Federal"
             >
-              {buscandoCnpj ? "..." : "Buscar CNPJ"}
+              <IconeLupa />
             </button>
           </div>
         </Campo>
@@ -1231,7 +1249,7 @@ function TerceiroSecao({
               <input
                 type="number"
                 min={0}
-                className="input"
+                className="input w-20!"
                 value={valor.qtdDependentes ?? ""}
                 onChange={(e) =>
                   onChange({ ...valor, qtdDependentes: Number(e.target.value) })
@@ -1279,10 +1297,11 @@ function TerceiroSecao({
               type="button"
               onClick={handleBuscarCep}
               disabled={buscandoCep}
-              className="shrink-0 rounded-lg border border-neutral-300 px-3 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 cursor-pointer"
+              className="btn-icon"
+              aria-label="Buscar endereço pelo CEP"
               title="Buscar endereço pelo CEP"
             >
-              {buscandoCep ? "..." : "Buscar CEP"}
+              <IconeLupa />
             </button>
           </div>
         </Campo>
@@ -1297,7 +1316,7 @@ function TerceiroSecao({
         </Campo>
         <Campo label="UF">
           <select
-            className="input"
+            className="input w-20!"
             value={valor.endereco.uf}
             onChange={(e) =>
               onChange({ ...valor, endereco: { ...valor.endereco, uf: e.target.value } })
@@ -1314,7 +1333,7 @@ function TerceiroSecao({
         <Campo label="Celular (DDD + número)">
           <div className="flex gap-2">
             <input
-              className="input w-16"
+              className="input w-16!"
               placeholder="DDD"
               value={valor.celular?.ddd ?? ""}
               onChange={(e) =>
@@ -1333,7 +1352,7 @@ function TerceiroSecao({
         <Campo label="Comercial (DDD + número)">
           <div className="flex gap-2">
             <input
-              className="input w-16"
+              className="input w-16!"
               placeholder="DDD"
               value={valor.comercial?.ddd ?? ""}
               onChange={(e) =>
@@ -1388,20 +1407,23 @@ function MunicipioAutocomplete({
   return (
     <Campo label={label} required>
       <div className="relative">
-        <input
-          className="input"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setMostrando(true);
-          }}
-          onFocus={() => setMostrando(true)}
-          onBlur={() => setTimeout(() => setMostrando(false), 150)}
-          placeholder="Digite o nome da cidade..."
-        />
+        <div className="relative">
+          <input
+            className="input pl-8"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setMostrando(true);
+            }}
+            onFocus={() => setMostrando(true)}
+            onBlur={() => setTimeout(() => setMostrando(false), 150)}
+            placeholder="Digite o nome da cidade..."
+          />
+          <IconeLupa className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-navy-300" />
+        </div>
         {mostrando && (buscando || resultados.length > 0) && (
-          <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-neutral-200 bg-white shadow-lg text-sm">
-            {buscando && <li className="px-3 py-2 text-neutral-400">Buscando...</li>}
+          <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-navy-100 bg-white shadow-lg text-sm">
+            {buscando && <li className="px-3 py-2 text-navy-300">Buscando...</li>}
             {resultados.map((m) => (
               <li key={m.codigo}>
                 <button
@@ -1411,7 +1433,7 @@ function MunicipioAutocomplete({
                     setQuery(`${m.nome}/${m.uf}`);
                     setMostrando(false);
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-neutral-50 cursor-pointer"
+                  className="w-full text-left px-3 py-2 hover:bg-navy-50 cursor-pointer"
                 >
                   {m.nome}/{m.uf}
                 </button>
@@ -1454,25 +1476,28 @@ function NaturezaCargaAutocomplete({
   }, [query]);
 
   return (
-    <Campo label="Natureza da carga" required>
+    <Campo label="Natureza da carga" required className="sm:col-span-2">
       <div className="relative">
-        <input
-          className="input"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setMostrando(true);
-          }}
-          onFocus={() => setMostrando(true)}
-          onBlur={() => setTimeout(() => setMostrando(false), 150)}
-          placeholder="Busque por código ou descrição (ex: soja, 1201)"
-        />
+        <div className="relative">
+          <input
+            className="input pl-8"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setMostrando(true);
+            }}
+            onFocus={() => setMostrando(true)}
+            onBlur={() => setTimeout(() => setMostrando(false), 150)}
+            placeholder="Busque por código ou descrição (ex: soja, 1201)"
+          />
+          <IconeLupa className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-navy-300" />
+        </div>
         {codigoAtual && !mostrando && (
-          <p className="text-xs text-neutral-500 mt-1">Código selecionado: {codigoAtual}</p>
+          <p className="text-xs text-navy-500 mt-1">Código selecionado: {codigoAtual}</p>
         )}
         {mostrando && (buscando || resultados.length > 0) && (
-          <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-neutral-200 bg-white shadow-lg text-sm">
-            {buscando && <li className="px-3 py-2 text-neutral-400">Buscando...</li>}
+          <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-navy-100 bg-white shadow-lg text-sm">
+            {buscando && <li className="px-3 py-2 text-navy-300">Buscando...</li>}
             {resultados.map((n) => (
               <li key={n.codigo}>
                 <button
@@ -1482,9 +1507,9 @@ function NaturezaCargaAutocomplete({
                     setQuery(`${n.codigo} - ${n.descricao}`);
                     setMostrando(false);
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-neutral-50 cursor-pointer"
+                  className="w-full text-left px-3 py-2 hover:bg-navy-50 cursor-pointer"
                 >
-                  <span className="font-mono text-xs text-neutral-500">{n.codigo}</span>{" "}
+                  <span className="font-mono text-xs text-navy-400">{n.codigo}</span>{" "}
                   {n.descricao}
                 </button>
               </li>
@@ -1500,14 +1525,16 @@ function Campo({
   label,
   required,
   children,
+  className,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="text-neutral-600">
+    <label className={"flex flex-col gap-1 text-sm" + (className ? ` ${className}` : "")}>
+      <span className="text-navy-600">
         {label} {required && <span className="text-red-500">*</span>}
       </span>
       {children}
@@ -1525,9 +1552,14 @@ function Checkbox({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className="text-neutral-600">{label}</span>
+    <label className="flex items-center gap-2 text-sm cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="w-4 h-4 accent-navy-700 cursor-pointer"
+      />
+      <span className="text-navy-700">{label}</span>
     </label>
   );
 }
