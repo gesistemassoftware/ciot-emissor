@@ -1,8 +1,8 @@
 import { buscarConta, obterCertificado } from "@/lib/auth/contas";
 import type { AnttCredenciais } from "./anttClient";
 
-const ANTT_BASE_URL_HML = "https://appservices-hml.antt.gov.br/pefServices";
-const ANTT_BASE_URL_PROD = "https://appservices.antt.gov.br/pefServices";
+const ANTT_BASE_URL_HML = "https://appservices-hml.antt.gov.br/pefServices/api";
+const ANTT_BASE_URL_PROD = "https://appservices.antt.gov.br/pefServices/api";
 
 /** null quando a conta ainda não tem certificado cadastrado (modo simulado). */
 export async function obterCredenciaisAntt(contaId: string): Promise<AnttCredenciais | null> {

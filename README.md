@@ -93,13 +93,15 @@ Sem `DATABASE_URL` configurado, os dados ficam num banco Postgres embarcado
    não atende TAC/CTC nem ETC sem frota própria.
 2. **Certificado digital ICP-Brasil A1 ou A3** emitido para o CNPJ da própria
    empresa.
-3. **Solicitar à ANTT o host e contexto exatos** de cada serviço. O
+3. O host usado é `appservices[-hml].antt.gov.br/pefServices/api/<Servico>`
+   (ex: `.../pefServices/api/DeclaracaoOperacaoTransporte`). O
    [Documento de Contrato de Serviço (DCS) PEF v1.1](https://www.gov.br/antt/pt-br/assuntos/cargas/ciot-para-todos-1/documentos-tecnicos)
-   informa textualmente que isso precisa ser pedido à ANTT durante a
-   implementação — não está documentado publicamente. Os domínios usados aqui
-   (`appservices[-hml].antt.gov.br/pefServices`) são os únicos citados no
-   próprio DCS; confirme o caminho completo de `DeclaracaoOperacaoTransporte`
-   com a ANTT antes de apontar clientes para produção.
+   não documenta o caminho completo publicamente — o segmento `/api/` foi
+   confirmado testando diretamente o servidor (sem esse segmento, os quatro
+   serviços retornam 404; com ele, retornam 405/411, indicando que a rota
+   existe). Se a ANTT alterar isso no futuro, confirme o caminho exato com o
+   suporte técnico do "CIOT Para Todos" antes de apontar clientes para
+   produção.
 4. Testar primeiro no **ambiente de homologação**.
 
 ### Códigos e tabelas oficiais da ANTT
