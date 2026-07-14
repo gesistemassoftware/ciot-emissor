@@ -285,7 +285,9 @@ export async function consultarFrotaTransportador(
       placa: v.PlacaVeiculo,
       pertence: v.SituacaoVeiculoFrotaTransportador === true || v.SituacaoVeiculoFrotaTransportador === 1,
     })),
-    mensagemErro: body.Mensagem,
+    // body.Mensagem no sucesso costuma ser só uma confirmação genérica da
+    // ANTT ("Consulta realizada com sucesso!"), não um erro — por isso não
+    // entra em mensagemErro aqui (só nos dois retornos de erro acima).
   };
 }
 
