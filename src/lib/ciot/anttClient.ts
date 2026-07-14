@@ -80,17 +80,16 @@ function postJson<T>(
 }
 
 /**
- * Identificador único da requisição, gerado pelo cliente (não é o CIOT em
- * si — esse vem da ANTT como CodigoIdentificacaoOperacao). Numérico porque
- * um valor hexadecimal (com letras) foi rejeitado como "inválido" em teste
- * real contra a ANTT.
+ * TEMPORÁRIO — diagnóstico: o DCS exige "ID da administradora + dígito
+ * verificador", que só a ANTT gera (via chamada a .../pefServices/token
+ * + .../pefServices/gerar, usando uma chave de credenciamento que ainda
+ * não temos). Valor abaixo veio da ferramenta oficial "Gerador CIOT v3.1
+ * - HOMOLOGAÇÃO" da ANTT, só para confirmar se o formato é aceito —
+ * NÃO é uma geração real, precisa ser substituído pela chamada real
+ * assim que tivermos a chave de administradora.
  */
 function gerarIdOperacaoTransporte(): string {
-  const timestamp = Date.now().toString().slice(-8);
-  const aleatorio = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0");
-  return `${timestamp}${aleatorio}`;
+  return "560000236263";
 }
 
 /**
