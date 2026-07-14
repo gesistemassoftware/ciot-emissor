@@ -1,5 +1,4 @@
 import https from "https";
-import { randomUUID } from "crypto";
 import type { CiotEmissaoInput, CiotStatus } from "./types";
 
 /**
@@ -80,16 +79,33 @@ function postJson<T>(
   });
 }
 
+/**
+ * Identificador único da requisição, gerado pelo cliente (não é o CIOT em
+ * si — esse vem da ANTT como CodigoIdentificacaoOperacao). Numérico porque
+ * um valor hexadecimal (com letras) foi rejeitado como "inválido" em teste
+ * real contra a ANTT.
+ */
+function gerarIdOperacaoTransporte(): string {
+  const timestamp = Date.now().toString().slice(-8);
+  const aleatorio = Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0");
+  return `${timestamp}${aleatorio}`;
+}
+
 function montarPayloadDeclaracao(input: CiotEmissaoInput) {
   return {
-    IdOperacaoTransporte: randomUUID().replace(/-/g, "").slice(0, 12),
+    IdOperacaoTransporte: gerarIdOperacaoTransporte(),
     TipoOperacao: input.operacao.tipoOperacao,
     CpfCnpjContratado: input.contratado.cpfCnpj.replace(/\D/g, ""),
     RNTRCContratado: input.contratado.rntrc,
     CpfCnpjContratante: input.contratante.cnpj.replace(/\D/g, ""),
     CpfCnpjDestinatario: input.destinatario.cpfCnpj.replace(/\D/g, "") || undefined,
     ValorFrete: input.operacao.valorFrete,
-    DataDeclaracao: new Date().toISOString(),
+    // DataInicioViagem/DataFimViagem (aceitas pela ANTT) vão só como
+    // yyyy-MM-dd; DataDeclaracao com timestamp completo (ISO + ms + Z) foi
+    // rejeitada como "inválida" em teste real — alinhando ao mesmo formato.
+    DataDeclaracao: new Date().toISOString().slice(0, 10),
     IndContingencia: input.operacao.indContingencia,
     JustificativaContingencia: input.operacao.justificativaContingencia,
     DataInicioViagem: input.operacao.dataInicioViagem,
