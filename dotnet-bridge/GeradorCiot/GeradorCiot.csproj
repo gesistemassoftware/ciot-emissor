@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,11 +6,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Ambiente=homologacao ou producao — escolhe qual DLL da ANTT é
+         embutido no binário publicado (veja README.md). -->
+    <Ambiente Condition="'$(Ambiente)' == ''">homologacao</Ambiente>
   </PropertyGroup>
 
   <ItemGroup>
     <Reference Include="GeradorCIOTShared">
-      <HintPath>..\lib\GeradorCIOTShared.dll</HintPath>
+      <HintPath>..\lib\$(Ambiente)\GeradorCIOTShared.dll</HintPath>
     </Reference>
   </ItemGroup>
 

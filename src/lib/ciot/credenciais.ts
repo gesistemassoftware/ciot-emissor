@@ -14,6 +14,7 @@ export async function obterCredenciaisAntt(contaId: string): Promise<AnttCredenc
 
   return {
     baseUrl: conta.anttAmbiente === "producao" ? ANTT_BASE_URL_PROD : ANTT_BASE_URL_HML,
+    ambiente: conta.anttAmbiente === "producao" ? "producao" : "homologacao",
     pfx: certificado.pfx,
     passphrase: certificado.passphrase,
   };

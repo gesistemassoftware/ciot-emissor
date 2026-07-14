@@ -27,6 +27,7 @@ import type { CiotEmissaoInput, CiotStatus } from "./types";
 
 export interface AnttCredenciais {
   baseUrl: string;
+  ambiente: "homologacao" | "producao";
   pfx: Buffer;
   passphrase: string;
 }
@@ -119,9 +120,9 @@ function normalizarRntrc(rntrc: string | undefined): string | undefined {
   return digitos;
 }
 
-async function montarPayloadDeclaracao(input: CiotEmissaoInput) {
+async function montarPayloadDeclaracao(input: CiotEmissaoInput, ambiente: "homologacao" | "producao") {
   return {
-    IdOperacaoTransporte: await gerarIdOperacaoTransporte(input.contratado.cpfCnpj),
+    IdOperacaoTransporte: await gerarIdOperacaoTransporte(input.contratado.cpfCnpj, ambiente),
     TipoOperacao: input.operacao.tipoOperacao,
     CpfCnpjContratado: input.contratado.cpfCnpj.replace(/\D/g, ""),
     RNTRCContratado: normalizarRntrc(input.contratado.rntrc),
@@ -367,7 +368,7 @@ export async function emitirCiotAntt(
   mensagemErro?: string;
   dataEmissao: string;
 }> {
-  const payload = await montarPayloadDeclaracao(input);
+  const payload = await montarPayloadDeclaracao(input, credenciais.ambiente);
   const { status, body } = await postJson<DeclaracaoResponse>(
     credenciais,
     "DeclaracaoOperacaoTransporte",

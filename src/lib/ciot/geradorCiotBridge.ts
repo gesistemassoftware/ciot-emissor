@@ -9,11 +9,13 @@ const execFileAsync = promisify(execFile);
  * .NET em dotnet-bridge/), que por sua vez consulta a própria ANTT
  * (.../pefServices/token + .../pefServices/gerar). Ver dotnet-bridge/README.md.
  */
-export async function gerarIdOperacaoTransporte(cpfCnpj: string): Promise<string> {
-  const binario =
-    process.platform === "win32"
-      ? path.join(process.cwd(), "dotnet-bridge", "bin", "win-x64", "GeradorCiot.exe")
-      : path.join(process.cwd(), "dotnet-bridge", "bin", "linux-x64", "GeradorCiot");
+export async function gerarIdOperacaoTransporte(
+  cpfCnpj: string,
+  ambiente: "homologacao" | "producao"
+): Promise<string> {
+  const plataforma = process.platform === "win32" ? "win-x64" : "linux-x64";
+  const executavel = process.platform === "win32" ? "GeradorCiot.exe" : "GeradorCiot";
+  const binario = path.join(process.cwd(), "dotnet-bridge", "bin", plataforma, ambiente, executavel);
 
   const digitos = cpfCnpj.replace(/\D/g, "");
 
