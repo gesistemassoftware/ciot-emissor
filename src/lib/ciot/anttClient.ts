@@ -1,4 +1,5 @@
 import https from "https";
+import { gerarIdOperacaoTransporte } from "./geradorCiotBridge";
 import type { CiotEmissaoInput, CiotStatus } from "./types";
 
 /**
@@ -80,19 +81,6 @@ function postJson<T>(
 }
 
 /**
- * TEMPORÁRIO — diagnóstico: o DCS exige "ID da administradora + dígito
- * verificador", que só a ANTT gera (via chamada a .../pefServices/token
- * + .../pefServices/gerar, usando uma chave de credenciamento que ainda
- * não temos). Valor abaixo veio da ferramenta oficial "Gerador CIOT v3.1
- * - HOMOLOGAÇÃO" da ANTT, só para confirmar se o formato é aceito —
- * NÃO é uma geração real, precisa ser substituído pela chamada real
- * assim que tivermos a chave de administradora.
- */
-function gerarIdOperacaoTransporte(): string {
-  return "560000236263";
-}
-
-/**
  * DCS PEF v1.1 exige "yyyy-MM-ddTHH:mm:ss" no horário de Brasília (regra
  * B11: tolerância de só 15 min antes a 5 min depois da data/hora atual,
  * "considerando o horário oficial de Brasília"). O Brasil não observa mais
@@ -131,9 +119,9 @@ function normalizarRntrc(rntrc: string | undefined): string | undefined {
   return digitos;
 }
 
-function montarPayloadDeclaracao(input: CiotEmissaoInput) {
+async function montarPayloadDeclaracao(input: CiotEmissaoInput) {
   return {
-    IdOperacaoTransporte: gerarIdOperacaoTransporte(),
+    IdOperacaoTransporte: await gerarIdOperacaoTransporte(input.contratado.cpfCnpj),
     TipoOperacao: input.operacao.tipoOperacao,
     CpfCnpjContratado: input.contratado.cpfCnpj.replace(/\D/g, ""),
     RNTRCContratado: normalizarRntrc(input.contratado.rntrc),
@@ -379,7 +367,7 @@ export async function emitirCiotAntt(
   mensagemErro?: string;
   dataEmissao: string;
 }> {
-  const payload = montarPayloadDeclaracao(input);
+  const payload = await montarPayloadDeclaracao(input);
   const { status, body } = await postJson<DeclaracaoResponse>(
     credenciais,
     "DeclaracaoOperacaoTransporte",
