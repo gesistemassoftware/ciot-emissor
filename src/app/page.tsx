@@ -141,6 +141,11 @@ export default function Home() {
   const [conta, setConta] = useState<ContaResumo | null>(null);
   const [alterandoAmbiente, setAlterandoAmbiente] = useState(false);
   const [novoContratanteFrac, setNovoContratanteFrac] = useState("");
+  const [verificandoFrota, setVerificandoFrota] = useState(false);
+  const [resultadoFrota, setResultadoFrota] = useState<{
+    ok: boolean;
+    mensagem: string;
+  } | null>(null);
 
   function adicionarContratanteFrac() {
     const valor = novoContratanteFrac.trim();
@@ -247,6 +252,46 @@ export default function Home() {
       setErroDistancia("Falha de comunicação ao calcular distância.");
     } finally {
       setCalculandoDistancia(false);
+    }
+  }
+
+  async function handleVerificarFrota() {
+    setVerificandoFrota(true);
+    setResultadoFrota(null);
+    try {
+      const res = await fetch("/api/ciot/consultar-frota", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cpfCnpjTransportador: form.contratado.cpfCnpj,
+          rntrcTransportador: form.contratado.rntrc,
+          placa: form.veiculo.placa,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResultadoFrota({ ok: false, mensagem: data.mensagem ?? "Não foi possível consultar." });
+        return;
+      }
+      if (data.mensagemErro) {
+        setResultadoFrota({ ok: false, mensagem: data.mensagemErro });
+        return;
+      }
+      const veiculo = data.frota?.[0];
+      const rntrcTexto = data.rntrcAtivo ? "RNTRC ativo" : "RNTRC INATIVO";
+      const vinculoTexto = veiculo?.pertence
+        ? "veículo VINCULADO a este transportador"
+        : "veículo NÃO vinculado a este transportador";
+      setResultadoFrota({
+        ok: !!data.rntrcAtivo && !!veiculo?.pertence,
+        mensagem: `${rntrcTexto} · ${vinculoTexto}${
+          data.nomeRazaoSocial ? ` (${data.nomeRazaoSocial})` : ""
+        }`,
+      });
+    } catch {
+      setResultadoFrota({ ok: false, mensagem: "Falha de comunicação ao consultar a ANTT." });
+    } finally {
+      setVerificandoFrota(false);
     }
   }
 
@@ -548,6 +593,27 @@ export default function Home() {
                 }
               />
             </Campo>
+            <div className="sm:col-span-2">
+              <button
+                type="button"
+                onClick={handleVerificarFrota}
+                disabled={verificandoFrota}
+                className="text-xs text-navy-700 hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                {verificandoFrota
+                  ? "Verificando na ANTT..."
+                  : "Verificar vínculo do veículo com o Contratado na ANTT"}
+              </button>
+              {resultadoFrota && (
+                <p
+                  className={
+                    "mt-1 text-xs " + (resultadoFrota.ok ? "text-emerald-700" : "text-red-600")
+                  }
+                >
+                  {resultadoFrota.mensagem}
+                </p>
+              )}
+            </div>
           </Secao>
 
           {form.operacao.composicaoVeicular && (

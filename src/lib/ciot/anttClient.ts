@@ -221,6 +221,74 @@ interface ConsultaCiotResponse {
   Mensagem?: string;
 }
 
+interface ConsultaFrotaResponse {
+  CpfCnpjTransportador?: string;
+  RNTRCTransportador?: string;
+  NomeRazaoSocialTransportador?: string;
+  RNTRCAtivo?: boolean;
+  Mensagem?: string;
+  Protocolo?: string;
+  Codigo?: string;
+  Frota?: { PlacaVeiculo: string; SituacaoVeiculoFrotaTransportador: boolean | number }[];
+}
+
+/**
+ * Serviço ConsultarFrotaTransportador (DCS PEF v1.1) — verifica, antes de
+ * declarar, se uma placa realmente "pertence" ao transportador no cadastro
+ * da ANTT. Útil para diagnosticar rejeições de vínculo veículo/contratado
+ * (regra B20 da Declaração) sem precisar tentar emitir de verdade.
+ */
+export async function consultarFrotaTransportador(
+  cpfCnpjTransportador: string,
+  rntrcTransportador: string,
+  placas: string[],
+  credenciais: AnttCredenciais
+): Promise<{
+  rntrcAtivo: boolean;
+  nomeRazaoSocial?: string;
+  frota: { placa: string; pertence: boolean }[];
+  mensagemErro?: string;
+}> {
+  let status: number;
+  let body: ConsultaFrotaResponse;
+  try {
+    ({ status, body } = await postJson<ConsultaFrotaResponse>(
+      credenciais,
+      "ConsultarFrotaTransportador",
+      {
+        CpfCnpjInteressado: cpfCnpjTransportador.replace(/\D/g, ""),
+        CpfCnpjTransportador: cpfCnpjTransportador.replace(/\D/g, ""),
+        RNTRCTransportador: normalizarRntrc(rntrcTransportador),
+        Placas: placas.map(normalizarPlaca),
+      }
+    ));
+  } catch (error) {
+    return {
+      rntrcAtivo: false,
+      frota: [],
+      mensagemErro: error instanceof Error ? error.message : "Falha ao comunicar com a ANTT.",
+    };
+  }
+
+  if (status < 200 || status >= 300) {
+    return {
+      rntrcAtivo: false,
+      frota: [],
+      mensagemErro: body.Mensagem ?? `Erro HTTP ${status} na ANTT.`,
+    };
+  }
+
+  return {
+    rntrcAtivo: !!body.RNTRCAtivo,
+    nomeRazaoSocial: body.NomeRazaoSocialTransportador,
+    frota: (body.Frota ?? []).map((v) => ({
+      placa: v.PlacaVeiculo,
+      pertence: v.SituacaoVeiculoFrotaTransportador === true || v.SituacaoVeiculoFrotaTransportador === 1,
+    })),
+    mensagemErro: body.Mensagem,
+  };
+}
+
 /**
  * Cancelamento e Encerramento usam o CIOT concatenado com o Código
  * Verificador (16 caracteres = 12 do CIOT + 4 do verificador) — diferente da
