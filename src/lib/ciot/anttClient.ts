@@ -104,12 +104,34 @@ function dataDeclaracaoBrasilia(): string {
   return agoraBrasilia.toISOString().slice(0, 19);
 }
 
+/**
+ * DCS PEF v1.1: placa no padrão brasileiro (AAA9999) ou Mercosul (AAA9A99),
+ * sem traço — remove qualquer caractere que não seja letra/número, já que
+ * o formulário aceita o usuário digitar com traço (ex: "MNR-1A80").
+ */
+function normalizarPlaca(placa: string): string {
+  return placa.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+/**
+ * DCS PEF v1.1 (regra B60 — "Normalização do RNTRC"): só dígitos; com 8
+ * dígitos completa com zero à esquerda até 9, com 9 mantém como está.
+ * O formulário aceita o usuário digitar com prefixo/traço (ex:
+ * "RNTRC-1234567"), então limpamos antes de enviar.
+ */
+function normalizarRntrc(rntrc: string | undefined): string | undefined {
+  if (!rntrc) return rntrc;
+  const digitos = rntrc.replace(/\D/g, "");
+  if (digitos.length === 8) return `0${digitos}`;
+  return digitos;
+}
+
 function montarPayloadDeclaracao(input: CiotEmissaoInput) {
   return {
     IdOperacaoTransporte: gerarIdOperacaoTransporte(),
     TipoOperacao: input.operacao.tipoOperacao,
     CpfCnpjContratado: input.contratado.cpfCnpj.replace(/\D/g, ""),
-    RNTRCContratado: input.contratado.rntrc,
+    RNTRCContratado: normalizarRntrc(input.contratado.rntrc),
     CpfCnpjContratante: input.contratante.cnpj.replace(/\D/g, ""),
     CpfCnpjDestinatario: input.destinatario.cpfCnpj.replace(/\D/g, "") || undefined,
     ValorFrete: input.operacao.valorFrete,
@@ -120,14 +142,14 @@ function montarPayloadDeclaracao(input: CiotEmissaoInput) {
     DataFimViagem: input.operacao.dataFimViagem,
     Veiculos: [
       {
-        Placa: input.veiculo.placa.toUpperCase(),
-        RNTRC: input.veiculo.rntrc,
+        Placa: normalizarPlaca(input.veiculo.placa),
+        RNTRC: normalizarRntrc(input.veiculo.rntrc),
         NumeroEixos: input.veiculo.numeroEixos,
       },
       ...(input.operacao.composicaoVeicular && input.implementos
         ? input.implementos.map((implemento) => ({
-            Placa: implemento.placa.toUpperCase(),
-            RNTRC: implemento.rntrc,
+            Placa: normalizarPlaca(implemento.placa),
+            RNTRC: normalizarRntrc(implemento.rntrc),
             NumeroEixos: implemento.numeroEixos,
           }))
         : []),
