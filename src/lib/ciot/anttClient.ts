@@ -93,6 +93,17 @@ function gerarIdOperacaoTransporte(): string {
   return `${timestamp}${aleatorio}`;
 }
 
+/**
+ * DCS PEF v1.1 exige "yyyy-MM-ddTHH:mm:ss" no horário de Brasília (regra
+ * B11: tolerância de só 15 min antes a 5 min depois da data/hora atual,
+ * "considerando o horário oficial de Brasília"). O Brasil não observa mais
+ * horário de verão, então o offset é fixo em UTC-3.
+ */
+function dataDeclaracaoBrasilia(): string {
+  const agoraBrasilia = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  return agoraBrasilia.toISOString().slice(0, 19);
+}
+
 function montarPayloadDeclaracao(input: CiotEmissaoInput) {
   return {
     IdOperacaoTransporte: gerarIdOperacaoTransporte(),
@@ -102,10 +113,7 @@ function montarPayloadDeclaracao(input: CiotEmissaoInput) {
     CpfCnpjContratante: input.contratante.cnpj.replace(/\D/g, ""),
     CpfCnpjDestinatario: input.destinatario.cpfCnpj.replace(/\D/g, "") || undefined,
     ValorFrete: input.operacao.valorFrete,
-    // DataInicioViagem/DataFimViagem (aceitas pela ANTT) vão só como
-    // yyyy-MM-dd; DataDeclaracao com timestamp completo (ISO + ms + Z) foi
-    // rejeitada como "inválida" em teste real — alinhando ao mesmo formato.
-    DataDeclaracao: new Date().toISOString().slice(0, 10),
+    DataDeclaracao: dataDeclaracaoBrasilia(),
     IndContingencia: input.operacao.indContingencia,
     JustificativaContingencia: input.operacao.justificativaContingencia,
     DataInicioViagem: input.operacao.dataInicioViagem,
