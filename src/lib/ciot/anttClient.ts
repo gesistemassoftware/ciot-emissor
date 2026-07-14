@@ -118,10 +118,16 @@ function normalizarPlaca(placa: string): string {
  * dígitos completa com zero à esquerda até 9, com 9 mantém como está.
  * O formulário aceita o usuário digitar com prefixo/traço (ex:
  * "RNTRC-1234567"), então limpamos antes de enviar.
+ *
+ * Quando vazio (ex: "RNTRC do veículo" em branco, por ser igual ao do
+ * contratado), retorna undefined para o campo ser omitido do JSON —
+ * mandar "" foi rejeitado pela ANTT como se o veículo não tivesse
+ * vínculo com o transportador contratado (regra B20).
  */
 function normalizarRntrc(rntrc: string | undefined): string | undefined {
-  if (!rntrc) return rntrc;
+  if (!rntrc) return undefined;
   const digitos = rntrc.replace(/\D/g, "");
+  if (!digitos) return undefined;
   if (digitos.length === 8) return `0${digitos}`;
   return digitos;
 }
