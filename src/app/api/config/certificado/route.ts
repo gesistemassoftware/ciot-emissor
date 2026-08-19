@@ -46,7 +46,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ mensagem: erroPfx }, { status: 400 });
   }
 
-  await salvarCertificado(contaId, buffer, nomeArquivo, passphrase);
+  try {
+    await salvarCertificado(contaId, buffer, nomeArquivo, passphrase);
+  } catch (error) {
+    return NextResponse.json(
+      { mensagem: error instanceof Error ? error.message : "Falha ao salvar o certificado." },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }
