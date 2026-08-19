@@ -425,7 +425,7 @@ export default function Home() {
                 }
               >
                 <option value={1}>1 - Carga Lotação</option>
-                <option value={2}>2 - Carga Fracionada</option>
+                <option value={2}>2 - Last Mile</option>
                 <option value={3}>3 - TAC-Agregado</option>
               </select>
             </Campo>
@@ -831,10 +831,10 @@ export default function Home() {
                 {form.operacao.tipoOperacao === 2 && (
                   <div className="sm:col-span-2">
                     <span className="text-sm text-navy-600">
-                      Outros contratantes da carga fracionada <span className="text-red-500">*</span>
+                      Outros contratantes (Last Mile) <span className="text-red-500">*</span>
                     </span>
                     <p className="text-xs text-navy-400 mb-2">
-                      Obrigatório para Carga Fracionada — CPF/CNPJ de cada contratante adicional
+                      Obrigatório para Last Mile — CPF/CNPJ de cada contratante adicional
                       da mesma viagem.
                     </p>
                     {(form.operacao.contratantesCargaFrac?.length ?? 0) > 0 && (

@@ -1,6 +1,11 @@
 export type TipoTransportador = "TAC" | "ETC" | "CTC";
 
-/** 1 - Carga Lotação; 2 - Carga Fracionada; 3 - TAC-Agregado (DCS PEF v1.1) */
+/**
+ * 1 - Carga Lotação; 2 - Last Mile; 3 - TAC-Agregado.
+ * O PDF do DCS PEF v1.1 chamava a opção 2 de "Carga Fracionada", mas o
+ * schema Swagger ao vivo (.../pefServices/swagger/docs/v1) usa "Last Mile"
+ * — confirmado diretamente com a ANTT como a fonte mais atual.
+ */
 export type TipoOperacao = 1 | 2 | 3;
 
 /** 1-12 conforme tabela oficial de Tipo de Carga da ANTT (DCS PEF v1.1) */
@@ -88,7 +93,7 @@ export interface Operacao {
   composicaoVeicular: boolean;
   indContingencia: boolean;
   justificativaContingencia?: string;
-  /** CPF/CNPJ de outros contratantes da carga — obrigatório quando tipoOperacao = 2 (Carga Fracionada) */
+  /** CPF/CNPJ de outros contratantes da carga — obrigatório quando tipoOperacao = 2 (Last Mile) */
   contratantesCargaFrac?: string[];
 }
 

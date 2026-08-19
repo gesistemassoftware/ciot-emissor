@@ -45,7 +45,7 @@ function validar(input: Partial<CiotEmissaoInput>): string | null {
     input.operacao?.tipoOperacao === 2 &&
     (!input.operacao?.contratantesCargaFrac || input.operacao.contratantesCargaFrac.length === 0)
   )
-    return "Informe ao menos um contratante da carga fracionada (obrigatório para Carga Fracionada).";
+    return "Informe ao menos um contratante adicional (obrigatório para Last Mile).";
   if (!input.operacao?.codigoMunicipioOrigem || !input.operacao?.codigoMunicipioDestino)
     return "Código IBGE do município de origem e de destino são obrigatórios.";
   if (!input.operacao?.dataInicioViagem || !input.operacao?.dataFimViagem)
