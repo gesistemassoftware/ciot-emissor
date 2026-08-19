@@ -38,6 +38,25 @@ Node chama o binário certo (sistema operacional + ambiente da conta) via
 `src/lib/ciot/credenciais.ts`) — não precisa instalar .NET no Render, o
 runtime já está embutido em cada binário.
 
+## ⚠️ Não funciona em serverless da Vercel
+
+Testado e confirmado: o binário `linux-x64` roda no Render (VM
+persistente) mas falha nas funções serverless da Vercel com:
+
+```
+Cannot get required symbol EVP_rc2_cbc from libssl
+```
+
+O DLL da ANTT usa RC2 (cifra legada) ao processar o certificado
+internamente, e o .NET depende da OpenSSL do sistema operacional para
+isso — a imagem serverless da Vercel não inclui esse algoritmo legado
+(o Render inclui). Login, cadastro, banco de dados e upload de
+certificado funcionam normalmente na Vercel; só a geração real do
+`IdOperacaoTransporte` (e portanto a emissão de CIOT de verdade) não
+funciona lá. Use o Render para emissões reais até (se algum dia)
+valer a pena investigar embutir uma OpenSSL compatível junto do
+binário.
+
 ## Como reconstruir (se algum DLL for atualizado)
 
 ```bash
