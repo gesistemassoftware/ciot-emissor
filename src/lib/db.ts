@@ -13,13 +13,27 @@ import { Pool, type QueryResultRow } from "pg";
  * ./data/pglite — só para desenvolvimento local.
  */
 
+/**
+ * Remove "sslmode" da connection string. O pg-connection-string trata
+ * sslmode=require/prefer/verify-ca como alias de verify-full (verificação
+ * estrita do certificado) e isso vence a opção `ssl` explícita passada ao
+ * Pool — mesmo com rejectUnauthorized:false, a conexão falhava com
+ * "self-signed certificate in certificate chain". Sem o sslmode na URL,
+ * só a nossa config de `ssl` no Pool vale.
+ */
+function removerSslMode(connectionString: string): string {
+  const url = new URL(connectionString);
+  url.searchParams.delete("sslmode");
+  return url.toString();
+}
+
 function obterConnectionString(): string | undefined {
-  return (
+  const bruta =
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL_NON_POOLING
-  );
+    process.env.POSTGRES_URL_NON_POOLING;
+  return bruta ? removerSslMode(bruta) : undefined;
 }
 
 interface QueryClient {
