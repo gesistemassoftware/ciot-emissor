@@ -120,6 +120,22 @@ function normalizarRntrc(rntrc: string | undefined): string | undefined {
   return digitos;
 }
 
+/**
+ * O schema oficial (Swagger, obtido em .../pefServices/swagger/docs/v1)
+ * tipa vários campos "numéricos"/booleanos como STRING (ex: ValorFrete
+ * tem pattern de decimal, mas type:"string"; IndContingencia tem
+ * pattern "true|false", também type:"string"). Convertemos aqui em vez
+ * de mudar os tipos internos do formulário, que ficam melhores como
+ * number/boolean para a UI.
+ */
+function formatarValorAntt(valor: number | undefined): string | undefined {
+  return valor === undefined ? undefined : valor.toFixed(2);
+}
+
+function formatarBooleanoAntt(valor: boolean): string {
+  return valor ? "true" : "false";
+}
+
 async function montarPayloadDeclaracao(input: CiotEmissaoInput, ambiente: "homologacao" | "producao") {
   return {
     IdOperacaoTransporte: await gerarIdOperacaoTransporte(input.contratado.cpfCnpj, ambiente),
@@ -128,9 +144,9 @@ async function montarPayloadDeclaracao(input: CiotEmissaoInput, ambiente: "homol
     RNTRCContratado: normalizarRntrc(input.contratado.rntrc),
     CpfCnpjContratante: input.contratante.cnpj.replace(/\D/g, ""),
     CpfCnpjDestinatario: input.destinatario.cpfCnpj.replace(/\D/g, "") || undefined,
-    ValorFrete: input.operacao.valorFrete,
+    ValorFrete: formatarValorAntt(input.operacao.valorFrete),
     DataDeclaracao: dataDeclaracaoBrasilia(),
-    IndContingencia: input.operacao.indContingencia,
+    IndContingencia: formatarBooleanoAntt(input.operacao.indContingencia),
     JustificativaContingencia: input.operacao.justificativaContingencia,
     DataInicioViagem: input.operacao.dataInicioViagem,
     DataFimViagem: input.operacao.dataFimViagem,
@@ -138,13 +154,13 @@ async function montarPayloadDeclaracao(input: CiotEmissaoInput, ambiente: "homol
       {
         Placa: normalizarPlaca(input.veiculo.placa),
         RNTRC: normalizarRntrc(input.veiculo.rntrc),
-        NumeroEixos: input.veiculo.numeroEixos,
+        NumeroEixos: String(input.veiculo.numeroEixos),
       },
       ...(input.operacao.composicaoVeicular && input.implementos
         ? input.implementos.map((implemento) => ({
             Placa: normalizarPlaca(implemento.placa),
             RNTRC: normalizarRntrc(implemento.rntrc),
-            NumeroEixos: implemento.numeroEixos,
+            NumeroEixos: String(implemento.numeroEixos),
           }))
         : []),
     ],
@@ -152,14 +168,16 @@ async function montarPayloadDeclaracao(input: CiotEmissaoInput, ambiente: "homol
       {
         Origem: { CodigoMunicipioOrigem: input.operacao.codigoMunicipioOrigem },
         Destino: { CodigoMunicipioDestino: input.operacao.codigoMunicipioDestino },
-        DistanciaPercorrida: input.operacao.distanciaPercorridaKm,
+        DistanciaPercorrida: input.operacao.distanciaPercorridaKm > 0 ? input.operacao.distanciaPercorridaKm : undefined,
       },
     ],
     DadosCarga: {
       CodigoNaturezaCarga: input.operacao.codigoNaturezaCarga,
-      PesoCarga: input.operacao.pesoCargaKg,
+      PesoCarga: String(input.operacao.pesoCargaKg),
       CodigoTipoCarga: input.operacao.codigoTipoCarga,
-      ContratantesCargaFrac:
+      // Nome exato do campo no schema oficial da ANTT é "ContratantesCargFrac"
+      // (sem o "a" de "Carga") — com o nome errado a ANTT ignora o campo.
+      ContratantesCargFrac:
         input.operacao.tipoOperacao === 2
           ? input.operacao.contratantesCargaFrac?.map((cpfCnpj) => cpfCnpj.replace(/\D/g, ""))
           : undefined,
@@ -174,16 +192,16 @@ async function montarPayloadDeclaracao(input: CiotEmissaoInput, ambiente: "homol
         CpfCnpjCreditado: input.pagamento.cpfCnpjCreditado,
         CodigoPagamento: input.pagamento.codigoPagamento,
         IdentificadorPix: input.pagamento.identificadorPix,
-        IndPagamento: input.pagamento.indPagamento,
-        NumeroParcela: input.pagamento.numeroParcela,
+        IndPagamento: String(input.pagamento.indPagamento),
+        NumeroParcela: input.pagamento.numeroParcela !== undefined ? String(input.pagamento.numeroParcela) : undefined,
         DataVencimento: input.pagamento.dataVencimento,
-        ValorParcela: input.pagamento.valorParcela,
+        ValorParcela: formatarValorAntt(input.pagamento.valorParcela),
       },
     ],
     InfIndicadoresOperacionais: {
-      IndAltoDesempenho: input.operacao.indAltoDesempenho,
-      IndRetornoVazio: input.operacao.indRetornoVazio,
-      ComposicaoVeicular: input.operacao.composicaoVeicular,
+      IndAltoDesempenho: formatarBooleanoAntt(input.operacao.indAltoDesempenho),
+      IndRetornoVazio: formatarBooleanoAntt(input.operacao.indRetornoVazio),
+      ComposicaoVeicular: formatarBooleanoAntt(input.operacao.composicaoVeicular),
     },
   };
 }
