@@ -37,8 +37,12 @@ async function criarClient(): Promise<QueryClient> {
     const pool = new Pool({
       connectionString,
       // Bancos gerenciados (Render, Vercel/Supabase, Heroku etc.) usam
-      // certificado autoassinado; sem isso o driver rejeita a conexão TLS.
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+      // certificado autoassinado; sem isso o driver rejeita a conexão TLS
+      // com "self-signed certificate in certificate chain". Antes isso só
+      // era aplicado quando NODE_ENV === "production", mas na Vercel isso
+      // não bastou — agora relaxamos sempre que há uma connection string
+      // real (nunca é o caso de conectar num Postgres local sem TLS aqui).
+      ssl: { rejectUnauthorized: false },
     });
     return pool;
   }
