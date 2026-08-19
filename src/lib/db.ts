@@ -3,11 +3,24 @@ import { Pool, type QueryResultRow } from "pg";
 /**
  * Camada de acesso a banco única para toda a aplicação.
  *
- * Em produção (Vercel), aponte DATABASE_URL para um Postgres real (ex: Vercel
- * Postgres / Neon). Sem DATABASE_URL definido, usamos PGlite (Postgres
- * compilado para WASM, sem servidor) gravando em ./data/pglite — só para
- * desenvolvimento local, não serve para produção multi-instância.
+ * Em produção, aponte DATABASE_URL para um Postgres real (ex: Render
+ * Postgres, Neon). Também aceita as variáveis que a integração
+ * Vercel+Supabase cria automaticamente (POSTGRES_URL / POSTGRES_PRISMA_URL) —
+ * sem isso, quem conecta um banco pela integração da Vercel cai
+ * silenciosamente no PGlite local, que não funciona em serverless (sistema
+ * de arquivos somente leitura fora de /tmp). Sem nenhuma dessas variáveis,
+ * usamos PGlite (Postgres compilado para WASM, sem servidor) gravando em
+ * ./data/pglite — só para desenvolvimento local.
  */
+
+function obterConnectionString(): string | undefined {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL_NON_POOLING
+  );
+}
 
 interface QueryClient {
   query<T extends QueryResultRow = QueryResultRow>(
@@ -19,11 +32,12 @@ interface QueryClient {
 let clientPromise: Promise<QueryClient> | null = null;
 
 async function criarClient(): Promise<QueryClient> {
-  if (process.env.DATABASE_URL) {
+  const connectionString = obterConnectionString();
+  if (connectionString) {
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      // Bancos gerenciados (Render, Heroku etc.) usam certificado autoassinado;
-      // sem isso o driver rejeita a conexão TLS em produção.
+      connectionString,
+      // Bancos gerenciados (Render, Vercel/Supabase, Heroku etc.) usam
+      // certificado autoassinado; sem isso o driver rejeita a conexão TLS.
       ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
     });
     return pool;
